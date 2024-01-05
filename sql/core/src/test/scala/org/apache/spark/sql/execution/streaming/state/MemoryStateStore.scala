@@ -46,6 +46,11 @@ class MemoryStateStore extends StateStore() {
     throw new UnsupportedOperationException("store does not support multiple keys put")
   }
 
+  def removeWithMultipleKeys(key: UnsafeRow, userKey: UnsafeRow,
+                         colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
+    throw new UnsupportedOperationException("Multiple keys remove is not supported")
+  }
+
   override def remove(key: UnsafeRow, colFamilyName: String): Unit = map.remove(key)
 
   override def commit(): Long = version + 1

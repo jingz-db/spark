@@ -17,7 +17,7 @@
 package org.apache.spark.sql.execution.streaming
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.execution.streaming.state.StateStore
+import org.apache.spark.sql.execution.streaming.state.{StateStore, UnsafeRowPair}
 import org.apache.spark.sql.streaming.MapState
 
 class MapStateImpl[K, V](store: StateStore,
@@ -56,22 +56,37 @@ class MapStateImpl[K, V](store: StateStore,
     val encodedUserKey = StateEncoder.encodeUserKey(key)
     println(s"Hey I am actually inside updateValue: userKey: $key value: $value")
     println(s"I am inside updateValue, encoded row userKey: $encodedUserKey")
+    if (containsKey(key)) {
+      removeKey(key)
+      println("After delete, exists: " + containsKey(key))
+    }
+    store.put(encodedKey, encodedValue, stateName)
     store.putWithMultipleKeys(encodedKey, encodedUserKey, encodedValue, stateName)
   }
 
-  /* Get the map associated with grouping key
+  /** Get the map associated with grouping key */
   override def getMap(): Map[K, V] = {
-
+    val encodedGroupingKey = StateEncoder.encodeKey(stateName)
+    store.prefixScan(encodedGroupingKey, stateName)
+      .map {
+      case iter: UnsafeRowPair =>
+        println("I am inside getMap(), iter: " + iter)
+        (StateEncoder.decode(iter.key), StateEncoder.decode(iter.value))
+    }.toMap
   }
 
-  /** Get the list of keys present in map associated with grouping key */
+  /** Remove user key from map state */
+  override def removeKey(key: K): Unit = {
+    val encodedKey = StateEncoder.encodeKey(stateName)
+    val encodedUserKey = StateEncoder.encodeUserKey(key)
+    store.removeWithMultipleKeys(encodedKey, encodedUserKey, stateName)
+  }
+
+  /* Get the list of keys present in map associated with grouping key
   override def getKeys(): Iterator[K] = {}
 
   /** Get the list of values present in map associated with grouping key */
   override def getValues(): Iterator[V] = {}
-
-  /** Remove user key from map state */
-  override def removeKey(key: K): Unit = {}
 
   /** Remove this state. */
   override def remove(): Unit = {} */

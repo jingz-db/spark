@@ -287,13 +287,20 @@ class StatefulProcessorStateEncoder(keySchema: StructType, valueSchema: StructTy
 
   // Reusable objects
   private val keyRow = new UnsafeRow(keySchema.size)
+  private val userKeyRow = new UnsafeRow(keySchema.size)
   private val valueRow = new UnsafeRow(valueSchema.size)
   private val rowTuple = new UnsafeRowPair()
 
   override def supportPrefixKeyScan: Boolean = false
 
   override def encodePrefixKey(prefixKey: UnsafeRow): Array[Byte] = {
-    throw new IllegalStateException("This encoder doesn't support prefix key!")
+    println("I am inside this encodePrefix key")
+    val prefixKeyEncoded = encodeUnsafeRow(prefixKey)
+    val prefix = new Array[Byte](prefixKeyEncoded.length + 4)
+    Platform.putInt(prefix, Platform.BYTE_ARRAY_OFFSET, prefixKeyEncoded.length)
+    Platform.copyMemory(prefixKeyEncoded, Platform.BYTE_ARRAY_OFFSET, prefix,
+      Platform.BYTE_ARRAY_OFFSET + 4, prefixKeyEncoded.length)
+    prefix
   }
 
   override def extractPrefixKey(key: UnsafeRow): UnsafeRow = {
@@ -303,24 +310,6 @@ class StatefulProcessorStateEncoder(keySchema: StructType, valueSchema: StructTy
   override def encodeKey(row: UnsafeRow): Array[Byte] = {
     encodeUnsafeRow(row)
   }
-
-  override def encodeKeys(row1: UnsafeRow, row2: UnsafeRow): Array[Byte] = {
-    val prefixKeyEncoded = encodeUnsafeRow(row1)
-    val remainingEncoded = encodeUnsafeRow(row2)
-
-    val encodedBytes = new Array[Byte](prefixKeyEncoded.length + remainingEncoded.length + 4)
-    Platform.putInt(encodedBytes, Platform.BYTE_ARRAY_OFFSET, prefixKeyEncoded.length)
-    Platform.copyMemory(prefixKeyEncoded, Platform.BYTE_ARRAY_OFFSET,
-      encodedBytes, Platform.BYTE_ARRAY_OFFSET + 4, prefixKeyEncoded.length)
-    // NOTE: We don't put the length of remainingEncoded as we can calculate later
-    // on deserialization.
-    Platform.copyMemory(remainingEncoded, Platform.BYTE_ARRAY_OFFSET,
-      encodedBytes, Platform.BYTE_ARRAY_OFFSET + 4 + prefixKeyEncoded.length,
-      remainingEncoded.length)
-    // println(s"I am inside encodeKeys: $encodedBytes")
-    encodedBytes
-  }
-
   override def encodeValue(row: UnsafeRow): Array[Byte] = {
     val bytes = encodeUnsafeRow(row)
     val numBytes = bytes.length
@@ -335,6 +324,55 @@ class StatefulProcessorStateEncoder(keySchema: StructType, valueSchema: StructTy
 
   override def decodeKey(keyBytes: Array[Byte]): UnsafeRow = {
     decodeToUnsafeRow(keyBytes, keyRow)
+  }
+
+  def printArrayContents(arr: Array[Byte]): Unit = {
+    arr.foreach(byteValue => print(s"$byteValue "))
+    // Add a newline after printing the array elements for better readability
+    println()
+  }
+
+  // composite key: groupingKey---
+  override def encodeKeys(row1: UnsafeRow, row2: UnsafeRow): Array[Byte] = {
+    val prefixKeyEncoded = encodeUnsafeRow(row1)
+    val remainingEncoded = encodeUnsafeRow(row2)
+    println("gorupingKey encode length: " + prefixKeyEncoded.length)
+    val encodedBytes = new Array[Byte](prefixKeyEncoded.length + remainingEncoded.length + 4)
+    Platform.putInt(encodedBytes, Platform.BYTE_ARRAY_OFFSET, prefixKeyEncoded.length)
+    Platform.copyMemory(prefixKeyEncoded, Platform.BYTE_ARRAY_OFFSET,
+      encodedBytes, Platform.BYTE_ARRAY_OFFSET + 4, prefixKeyEncoded.length)
+    // NOTE: We don't put the length of remainingEncoded as we can calculate later
+    // on deserialization.
+    Platform.copyMemory(remainingEncoded, Platform.BYTE_ARRAY_OFFSET,
+      encodedBytes, Platform.BYTE_ARRAY_OFFSET + 4 + prefixKeyEncoded.length,
+      remainingEncoded.length)
+    println(s"I am inside encodeKeys: ")
+    printArrayContents(encodedBytes)
+    encodedBytes
+  }
+
+  def decodeKeys(keyBytes: Array[Byte]): (UnsafeRow, UnsafeRow) = {
+    // input keyBytes is the concatenation of prefix and userKey
+    println("inside decodeKeys, bytearray: ")
+    printArrayContents(keyBytes)
+    val groupingKeyEncodedLen = Platform.getInt(keyBytes, Platform.BYTE_ARRAY_OFFSET)
+    println("gorupingKey length: " + groupingKeyEncodedLen)
+    val groupingKeyEncoded = new Array[Byte](groupingKeyEncodedLen)
+    Platform.copyMemory(keyBytes, Platform.BYTE_ARRAY_OFFSET + 4, groupingKeyEncoded,
+      Platform.BYTE_ARRAY_OFFSET, groupingKeyEncodedLen)
+
+    // Here we calculate the remainingKeyEncodedLen leveraging the length of keyBytes
+    val remainingKeyEncodedLen = keyBytes.length - 4 - groupingKeyEncodedLen
+
+    val remainingKeyEncoded = new Array[Byte](remainingKeyEncodedLen)
+    Platform.copyMemory(keyBytes, Platform.BYTE_ARRAY_OFFSET + 4 +
+      groupingKeyEncodedLen, remainingKeyEncoded, Platform.BYTE_ARRAY_OFFSET,
+      remainingKeyEncodedLen)
+
+    val prefixKeyDecoded = decodeToUnsafeRow(groupingKeyEncoded, 1)
+    val remainingKeyDecoded = decodeToUnsafeRow(remainingKeyEncoded, 1)
+
+    (prefixKeyDecoded, remainingKeyDecoded)
   }
 
   override def decodeValue(valueBytes: Array[Byte]): UnsafeRow = {
@@ -378,6 +416,14 @@ class StatefulProcessorStateEncoder(keySchema: StructType, valueSchema: StructTy
   }
 
   override def decode(byteArrayTuple: ByteArrayPair): UnsafeRowPair = {
-    rowTuple.withRows(decodeKey(byteArrayTuple.key), decodeValue(byteArrayTuple.value))
+    decodeMultiple(byteArrayTuple)
+    // rowTuple.withRows(decodeKey(byteArrayTuple.key), decodeValue(byteArrayTuple.value))
+    // rowTuple.withRows(decodeKey(byteArrayTuple.key), decodeValue(byteArrayTuple.value))
+  }
+
+  def decodeMultiple(byteArrayTuple: ByteArrayPair): UnsafeRowPair = {
+    println("I am inside decode Multiple")
+    // rowTuple.withRows(decodeKey(byteArrayTuple.key), decodeValue(byteArrayTuple.value))
+    rowTuple.withRows(decodeKeys(byteArrayTuple.key)._2, decodeValue(byteArrayTuple.value))
   }
 }

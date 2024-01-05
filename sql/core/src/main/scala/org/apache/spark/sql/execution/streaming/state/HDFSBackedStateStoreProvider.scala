@@ -140,6 +140,11 @@ private[sql] class HDFSBackedStateStoreProvider extends StateStoreProvider with 
       throw new UnsupportedOperationException("Multiple keys put is not supported for HDFS")
     }
 
+    override def removeWithMultipleKeys(key: UnsafeRow, userKey: UnsafeRow,
+                               colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
+      throw new UnsupportedOperationException("Multiple keys remove is not supported for HDFS")
+    }
+
     override def put(key: UnsafeRow, value: UnsafeRow, colFamilyName: String): Unit = {
       require(value != null, "Cannot put a null value")
       verify(state == UPDATING, "Cannot put after already committed or aborted")

@@ -128,6 +128,9 @@ trait StateStore extends ReadStateStore {
   def putWithMultipleKeys(key: UnsafeRow, userKey: UnsafeRow, value: UnsafeRow,
           colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit
 
+  def removeWithMultipleKeys(key: UnsafeRow, userKey: UnsafeRow,
+          colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit
+
   /**
    * Remove a single non-null key.
    */

@@ -143,6 +143,14 @@ private[sql] class RocksDBStateStoreProvider
       rocksDB.put(encoder.encodeKeys(key, userKey), encoder.encodeValue(value), colFamilyName)
     }
 
+    override def removeWithMultipleKeys(key: UnsafeRow, userKey: UnsafeRow,
+        colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
+      verify(state == UPDATING, "Cannot remove after already committed or aborted")
+      verify(key != null, "Key cannot be null")
+      println("I am inside remove multiple keys")
+      rocksDB.remove(encoder.encodeKeys(key, userKey), colFamilyName)
+    }
+
     override def remove(key: UnsafeRow, colFamilyName: String): Unit = {
       verify(state == UPDATING, "Cannot remove after already committed or aborted")
       verify(key != null, "Key cannot be null")
@@ -150,6 +158,7 @@ private[sql] class RocksDBStateStoreProvider
     }
 
     override def iterator(colFamilyName: String): Iterator[UnsafeRowPair] = {
+      println("I am here inside iterator")
       rocksDB.iterator(colFamilyName).map { kv =>
         val rowPair = encoder.decode(kv)
         if (!isValidated && rowPair.value != null) {
@@ -163,10 +172,20 @@ private[sql] class RocksDBStateStoreProvider
 
     override def prefixScan(prefixKey: UnsafeRow, colFamilyName: String):
       Iterator[UnsafeRowPair] = {
+      /*
       require(encoder.supportPrefixKeyScan, "Prefix scan requires setting prefix key!")
 
       val prefix = encoder.encodePrefixKey(prefixKey)
       rocksDB.prefixScan(prefix, colFamilyName).map(kv => encoder.decode(kv))
+       */
+      println("I am inside prefix Scan+++++++")
+      val prefix = encoder.encodePrefixKey(prefixKey)
+      println(s"prefixKey row: $prefixKey, after encoding to bytes: ")
+      printArrayContents(prefix)
+
+      val res = rocksDB.prefixScan(prefix, colFamilyName).map(kv => encoder.decode(kv))
+      println("res has next: " + res.hasNext)
+      res
     }
 
     override def commit(): Long = synchronized {

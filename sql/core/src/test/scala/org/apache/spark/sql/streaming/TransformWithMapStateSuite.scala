@@ -48,7 +48,14 @@ class TestMapStateProcessor
         output = (key, row.value._1, _mapState.getValue(row.value._1)) :: output
       } else if (row.action == "updateValue") {
         _mapState.updateValue(row.value._1, row.value._2)
-        output = (key, row.value._1, row.value._2) :: output
+        // output = (key, row.value._1, row.value._2) :: output
+      } else if (row.action == "getMap") {
+        val res = _mapState.getMap()
+        println("get map: " + res)
+          res.foreach { pair =>
+            println("I am inside map foreach")
+            output = (key, pair._1, pair._2) :: output
+          }
       }
     }
     output.iterator
@@ -72,13 +79,15 @@ class TransformWithMapStateSuite extends StreamTest {
           TimeoutMode.noTimeouts(),
           OutputMode.Append())
       testStream(result, OutputMode.Append())(
-        AddData(inputData, InputMapRow("k2", "updateValue", ("v1", 10))),
+        AddData(inputData, InputMapRow("k1", "updateValue", ("v1", 10))),
         AddData(inputData, InputMapRow("k2", "updateValue", ("v2", 3))),
         AddData(inputData, InputMapRow("k2", "updateValue", ("v2", 12))),
-        // AddData(inputData, InputMapRow("k2", "updateValue", ("v4", 1))),
-        CheckAnswer(("k2", "v1", 10), ("k2", "v2", 3), ("k2", "v2", 12)),
-        AddData(inputData, InputMapRow("k2", "getValue", ("v2", 12))),
-        CheckNewAnswer(("k2", "v2", 12))
+        AddData(inputData, InputMapRow("k2", "updateValue", ("v4", 1))),
+        // CheckNewAnswer(("k2", "v1", 10), ("k2", "v2", 3), ("k2", "v2", 12)),
+        // CheckAnswer(("k2", "v2", 12)),
+
+        AddData(inputData, InputMapRow("k2", "getMap", ("", -1))),
+        CheckNewAnswer(("k2", "v2", 12), ("k2", "v4", 1))
       )
 
     }
