@@ -25,7 +25,6 @@ import org.apache.spark.annotation.{Evolving, Experimental}
  * map value state.
  */
 trait MapState[K, V] extends Serializable {
-
   /** Whether state exists or not. */
   def exists(): Boolean
 

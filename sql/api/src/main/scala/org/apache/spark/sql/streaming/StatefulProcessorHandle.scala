@@ -47,5 +47,9 @@ trait StatefulProcessorHandle extends Serializable {
    */
   def getListState[T](stateName: String): ListState[T]
 
+  /**
+   * Creates new or returns existing map state associated with stateName.
+   * The MapState persists Key-Value pairs of type [K, V].
+   */
   def getMapState[K, V](stateName: String): MapState[K, V]
 }

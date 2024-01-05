@@ -354,7 +354,6 @@ class RocksDB(
           numKeysOnWritingVersion -= 1
         }
       }
-      println("I am inside rocksdb delete")
       db.delete(colFamilyNameToHandleMap(colFamilyName), writeOptions, key)
       changelogWriter.foreach(_.delete(key, colFamilyName))
     } else {
@@ -384,9 +383,7 @@ class RocksDB(
     } else {
       db.newIterator()
     }
-    println(s"Getting iterator from version $loadedVersion")
     iter.seekToFirst()
-    println(s"seek to first is valid:  ${iter.isValid}")
     // Attempt to close this iterator if there is a task failure, or a task interruption.
     // This is a hack because it assumes that the RocksDB is running inside a task.
     Option(TaskContext.get()).foreach { tc =>
@@ -422,8 +419,6 @@ class RocksDB(
     }
 
     try {
-      logInfo(s"Counting keys - getting iterator from version $loadedVersion")
-      println("inside countKeys, colFamiltyName: " + colFamilyName)
       iter.seekToFirst()
 
       var keys = 0L
@@ -450,24 +445,12 @@ class RocksDB(
     } else {
       db.newIterator()
     }
-    println("prefix before seek: ")
-
-    def printArrayContents(arr: Array[Byte]): Unit = {
-      arr.foreach(byteValue => print(s"$byteValue "))
-      // Add a newline after printing the array elements for better readability
-      println()
-    }
-    printArrayContents(prefix)
-    // println("count keys: " + countKeys(colFamilyName))
-    println("inside prefixScan, colFamiltyName: " + colFamilyName)
     iter.seek(prefix)
-    println("after seek(), iter: " + iter.isValid)
 
     // Attempt to close this iterator if there is a task failure, or a task interruption.
-    /*
     Option(TaskContext.get()).foreach { tc =>
       tc.addTaskCompletionListener[Unit] { _ => iter.close() }
-    } */
+    }
 
     new NextIterator[ByteArrayPair] {
       override protected def getNext(): ByteArrayPair = {

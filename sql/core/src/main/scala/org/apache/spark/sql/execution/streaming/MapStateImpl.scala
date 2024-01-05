@@ -22,6 +22,8 @@ import org.apache.spark.sql.streaming.MapState
 
 class MapStateImpl[K, V](store: StateStore,
                          stateName: String) extends MapState[K, V] with Logging {
+  store.setUseCompositeKey()
+
   /** Whether state exists or not. */
   override def exists(): Boolean = {
     val encodedGroupingKey = StateEncoder.encodeKey(stateName)

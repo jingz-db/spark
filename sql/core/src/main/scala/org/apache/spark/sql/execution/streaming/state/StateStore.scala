@@ -60,6 +60,13 @@ trait ReadStateStore {
   /** Version of the data in this store before committing updates. */
   def version: Long
 
+  /** Whether composite key is used for state store. */
+  var useCompositeKey: Boolean = false
+
+  def setUseCompositeKey(colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
+    throw new UnsupportedOperationException("Set state store to use composite key is not supported")
+  }
+
   /**
    * Get the current value of a non-null key.
    * @return a non-null row if the key exists in the store, otherwise null.
@@ -118,6 +125,8 @@ trait StateStore extends ReadStateStore {
    * Create column family with given name, if absent.
    */
   def createColFamilyIfAbsent(colFamilyName: String): Unit
+
+  def setUseCompositeKey(colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit
 
   /**
    * Put a new non-null value for a non-null key. Implementations must be aware that the UnsafeRows

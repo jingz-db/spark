@@ -46,6 +46,10 @@ private[sql] class RocksDBStateStoreProvider
 
     override def version: Long = lastVersion
 
+    override def setUseCompositeKey(colFamilyName: String): Unit = {
+      useCompositeKey = true
+    }
+
     override def createColFamilyIfAbsent(colFamilyName: String): Unit = {
       verify(colFamilyName != StateStore.DEFAULT_COL_FAMILY_NAME,
         s"Failed to create column family with reserved_name=$colFamilyName")
@@ -65,6 +69,7 @@ private[sql] class RocksDBStateStoreProvider
 
     override def getWithCompositeKey(groupingKey: UnsafeRow,
        userKey: UnsafeRow, colFamilyName: String): UnsafeRow = {
+      verify(useCompositeKey, "Please setUseCompositeKey first")
       verify(groupingKey != null, "Grouping Key cannot be null")
       val value = encoder.decodeValue(
         rocksDB.get(encoder.encodeCompositeKey(groupingKey, userKey), colFamilyName))
@@ -119,6 +124,7 @@ private[sql] class RocksDBStateStoreProvider
 
     override def putWithCompositeKey(groupingKey: UnsafeRow, userKey: UnsafeRow, value: UnsafeRow,
         colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
+      verify(useCompositeKey, "Please setUseCompositeKey first")
       verify(state == UPDATING, "Cannot put after already committed or aborted")
       verify(groupingKey != null, "Key cannot be null")
       require(value != null, "Cannot put a null value")
@@ -134,6 +140,7 @@ private[sql] class RocksDBStateStoreProvider
 
     override def removeWithCompositeKey(groupingKey: UnsafeRow, userKey: UnsafeRow,
         colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
+      verify(useCompositeKey, "Please setUseCompositeKey first")
       verify(state == UPDATING, "Cannot remove after already committed or aborted")
       verify(groupingKey != null, "Grouping Key cannot be null")
       rocksDB.remove(encoder.encodeCompositeKey(groupingKey, userKey), colFamilyName)
@@ -153,18 +160,15 @@ private[sql] class RocksDBStateStoreProvider
 
     override def prefixScan(prefixKey: UnsafeRow, colFamilyName: String):
       Iterator[UnsafeRowPair] = {
-      /*
-      require(encoder.supportPrefixKeyScan, "Prefix scan requires setting prefix key!")
+      if (!useCompositeKey) {
+        require(encoder.supportPrefixKeyScan, "Prefix scan requires setting prefix key!")
 
-      val prefix = encoder.encodePrefixKey(prefixKey)
-      rocksDB.prefixScan(prefix, colFamilyName).map(kv => encoder.decode(kv))
-       */
-
-      val prefix = encoder.encodePrefixKey(prefixKey)
-
-      val res = rocksDB.prefixScan(prefix, colFamilyName).map(kv => encoder.decode(kv))
-      println("res has next: " + res.hasNext)
-      res
+        val prefix = encoder.encodePrefixKey(prefixKey)
+        rocksDB.prefixScan(prefix, colFamilyName).map(kv => encoder.decode(kv))
+      } else {
+        val prefix = encoder.encodePrefixKey(prefixKey)
+        rocksDB.prefixScan(prefix, colFamilyName).map(kv => encoder.decodeComposite(kv))
+      }
     }
 
     override def commit(): Long = synchronized {
