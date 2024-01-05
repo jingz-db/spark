@@ -48,14 +48,21 @@ class TestMapStateProcessor
         output = (key, row.value._1, _mapState.getValue(row.value._1)) :: output
       } else if (row.action == "updateValue") {
         _mapState.updateValue(row.value._1, row.value._2)
-        // output = (key, row.value._1, row.value._2) :: output
       } else if (row.action == "getMap") {
         val res = _mapState.getMap()
-        println("get map: " + res)
           res.foreach { pair =>
-            println("I am inside map foreach")
             output = (key, pair._1, pair._2) :: output
           }
+      } else if (row.action == "remove") {
+        _mapState.remove()
+      } else if (row.action == "getKeys") {
+        _mapState.getKeys().foreach { key =>
+          output = (row.key, key, row.value._2) :: output
+        }
+      } else if (row.action == "getVals") {
+        _mapState.getValues().foreach { value =>
+          output = (row.key, row.value._1, value) :: output
+        }
       }
     }
     output.iterator
@@ -83,11 +90,21 @@ class TransformWithMapStateSuite extends StreamTest {
         AddData(inputData, InputMapRow("k2", "updateValue", ("v2", 3))),
         AddData(inputData, InputMapRow("k2", "updateValue", ("v2", 12))),
         AddData(inputData, InputMapRow("k2", "updateValue", ("v4", 1))),
-        // CheckNewAnswer(("k2", "v1", 10), ("k2", "v2", 3), ("k2", "v2", 12)),
-        // CheckAnswer(("k2", "v2", 12)),
 
         AddData(inputData, InputMapRow("k2", "getMap", ("", -1))),
-        CheckNewAnswer(("k2", "v2", 12), ("k2", "v4", 1))
+        CheckNewAnswer(("k2", "v2", 12), ("k2", "v4", 1)),
+
+        AddData(inputData, InputMapRow("k2", "getKeys", ("", -1))),
+        CheckNewAnswer(("k2", "v2", -1), ("k2", "v4", -1)),
+
+        AddData(inputData, InputMapRow("k2", "getVals", ("", -1))),
+        CheckNewAnswer(("k2", "", 12), ("k2", "", 1)),
+
+        AddData(inputData, InputMapRow("k2", "remove", ("", -1))),
+        AddData(inputData, InputMapRow("k2", "getMap", ("", -1))),
+        CheckNewAnswer()
+
+
       )
 
     }

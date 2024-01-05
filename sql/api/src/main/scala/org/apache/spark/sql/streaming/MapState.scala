@@ -41,9 +41,7 @@ trait MapState[K, V] extends Serializable {
   /** Get the map associated with grouping key */
   def getMap(): Map[K, V]
 
-  def removeKey(key: K): Unit
-
-  /* Get the list of keys present in map associated with grouping key
+  /** Get the list of keys present in map associated with grouping key */
   def getKeys(): Iterator[K]
 
   /** Get the list of values present in map associated with grouping key */
@@ -53,6 +51,6 @@ trait MapState[K, V] extends Serializable {
   def removeKey(key: K): Unit
 
   /** Remove this state. */
-  def remove(): Unit */
+  def remove(): Unit
 }
 
