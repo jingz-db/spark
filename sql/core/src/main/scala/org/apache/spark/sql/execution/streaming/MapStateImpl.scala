@@ -24,16 +24,18 @@ class MapStateImpl[K, V](store: StateStore,
                          stateName: String) extends MapState[K, V] with Logging {
   /** Whether state exists or not. */
   override def exists(): Boolean = {
-    true
+    val encodedGroupingKey = StateEncoder.encodeKey(stateName)
+    !store.prefixScan(encodedGroupingKey, stateName).isEmpty
   }
 
   /** Get the state value if it exists */
   override def getValue(key: K): V = {
-    val encodedGroupingKey = StateEncoder.encodeKey(stateName) // unsafe rows of grouping key
+    val encodedGroupingKey = StateEncoder.encodeKey(stateName)
     val encodeUserKey = StateEncoder.encodeUserKey(key)
-    val unsafeRowValue = store.get(encodedGroupingKey, encodeUserKey, stateName)
+    val unsafeRowValue = store.getWithCompositeKey(encodedGroupingKey, encodeUserKey, stateName)
     if (unsafeRowValue == null) {
-      throw new UnsupportedOperationException("Cannot get value on empty key")
+      throw new UnsupportedOperationException(
+        "No value found for given grouping key and user key in the map.")
     }
     StateEncoder.decode(unsafeRowValue)
   }
@@ -52,7 +54,7 @@ class MapStateImpl[K, V](store: StateStore,
     val encodedValue = StateEncoder.encodeValue(value)
     val encodedKey = StateEncoder.encodeKey(stateName)
     val encodedUserKey = StateEncoder.encodeUserKey(key)
-    store.putWithMultipleKeys(encodedKey, encodedUserKey, encodedValue, stateName)
+    store.putWithCompositeKey(encodedKey, encodedUserKey, encodedValue, stateName)
   }
 
   /** Get the map associated with grouping key */
@@ -79,7 +81,7 @@ class MapStateImpl[K, V](store: StateStore,
   override def removeKey(key: K): Unit = {
     val encodedKey = StateEncoder.encodeKey(stateName)
     val encodedUserKey = StateEncoder.encodeUserKey(key)
-    store.removeWithMultipleKeys(encodedKey, encodedUserKey, stateName)
+    store.removeWithCompositeKey(encodedKey, encodedUserKey, stateName)
   }
 
   /** Remove this state. */

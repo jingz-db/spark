@@ -80,12 +80,13 @@ private[sql] class HDFSBackedStateStoreProvider extends StateStoreProvider with 
 
     override def get(key: UnsafeRow, colFamilyName: String): UnsafeRow = map.get(key)
 
-    override def iterator(colFamilyName: String): Iterator[UnsafeRowPair] = {
-      map.iterator()
+    override def getWithCompositeKey(key: UnsafeRow, userKey: UnsafeRow,
+                                     colFamilyName: String): UnsafeRow = {
+      throw new UnsupportedOperationException("Get with composite key is not supported for HDFS")
     }
 
-    override def get(key: UnsafeRow, userKey: UnsafeRow, colFamilyName: String): UnsafeRow = {
-      throw new UnsupportedOperationException("Multiple keys get is not supported for HDFS")
+    override def iterator(colFamilyName: String): Iterator[UnsafeRowPair] = {
+      map.iterator()
     }
 
     override def abort(): Unit = {}
@@ -131,18 +132,9 @@ private[sql] class HDFSBackedStateStoreProvider extends StateStoreProvider with 
       mapToUpdate.get(key)
     }
 
-    override def get(key: UnsafeRow, userKey: UnsafeRow, colFamilyName: String): UnsafeRow = {
-      throw new UnsupportedOperationException("Multiple keys get is not supported for HDFS")
-    }
-
-    override def putWithMultipleKeys(key: UnsafeRow, userKey: UnsafeRow, value: UnsafeRow,
-                            colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
-      throw new UnsupportedOperationException("Multiple keys put is not supported for HDFS")
-    }
-
-    override def removeWithMultipleKeys(key: UnsafeRow, userKey: UnsafeRow,
-                               colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
-      throw new UnsupportedOperationException("Multiple keys remove is not supported for HDFS")
+    override def getWithCompositeKey(key: UnsafeRow, userKey: UnsafeRow,
+        colFamilyName: String) : UnsafeRow = {
+      throw new UnsupportedOperationException("Get with composite key is not supported for HDFS")
     }
 
     override def put(key: UnsafeRow, value: UnsafeRow, colFamilyName: String): Unit = {
@@ -154,12 +146,22 @@ private[sql] class HDFSBackedStateStoreProvider extends StateStoreProvider with 
       writeUpdateToDeltaFile(compressedStream, keyCopy, valueCopy)
     }
 
+    override def putWithCompositeKey(key: UnsafeRow, userKey: UnsafeRow, value: UnsafeRow,
+        colFamilyName: String): Unit = {
+      throw new UnsupportedOperationException("Put with composite key is not supported for HDFS")
+    }
+
     override def remove(key: UnsafeRow, colFamilyName: String): Unit = {
       verify(state == UPDATING, "Cannot remove after already committed or aborted")
       val prevValue = mapToUpdate.remove(key)
       if (prevValue != null) {
         writeRemoveToDeltaFile(compressedStream, key)
       }
+    }
+
+    override def removeWithCompositeKey(key: UnsafeRow, userKey: UnsafeRow,
+        colFamilyName: String): Unit = {
+      throw new UnsupportedOperationException("Remove with composite key is not supported for HDFS")
     }
 
     /** Commit all the updates that have been made to the store, and return the new version. */

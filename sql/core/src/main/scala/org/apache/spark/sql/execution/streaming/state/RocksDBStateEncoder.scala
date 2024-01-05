@@ -30,8 +30,8 @@ sealed trait RocksDBStateEncoder {
 
   def encodeKey(row: UnsafeRow): Array[Byte]
 
-  def encodeKeys(row1: UnsafeRow, row2: UnsafeRow): Array[Byte] = {
-    throw new UnsupportedOperationException("encoder does not support multiple keys encoder")
+  def encodeCompositeKey(groupingKeyRow: UnsafeRow, userKeyRow: UnsafeRow): Array[Byte] = {
+    throw new UnsupportedOperationException("This encoder does not support composite key encoder")
   }
   def encodeValue(row: UnsafeRow): Array[Byte]
   def decodeKey(keyBytes: Array[Byte]): UnsafeRow
@@ -287,14 +287,23 @@ class StatefulProcessorStateEncoder(keySchema: StructType, valueSchema: StructTy
 
   // Reusable objects
   private val keyRow = new UnsafeRow(keySchema.size)
-  private val userKeyRow = new UnsafeRow(keySchema.size)
   private val valueRow = new UnsafeRow(valueSchema.size)
   private val rowTuple = new UnsafeRowPair()
+  private val userKeyRow = new UnsafeRow(keySchema.size)
 
-  override def supportPrefixKeyScan: Boolean = false
 
+  // TODO we need to enable this to perform prefixScan in MapState
+  // There might be better way to only enable this for MapState
+  override def supportPrefixKeyScan: Boolean = true
+
+  /**
+   * Supports encoding grouping key as prefix of key in rocksDB.
+   * This is used for MapState.
+   * Grouping key is encoded as the following format:
+   * |---size(bytes)--|--unsafeRowEncodedBytes--|
+   * Size of byte array is stored as an Int.
+   */
   override def encodePrefixKey(prefixKey: UnsafeRow): Array[Byte] = {
-    println("I am inside this encodePrefix key")
     val prefixKeyEncoded = encodeUnsafeRow(prefixKey)
     val prefix = new Array[Byte](prefixKeyEncoded.length + 4)
     Platform.putInt(prefix, Platform.BYTE_ARRAY_OFFSET, prefixKeyEncoded.length)
@@ -332,45 +341,40 @@ class StatefulProcessorStateEncoder(keySchema: StructType, valueSchema: StructTy
     println()
   }
 
-  // composite key: groupingKey---
-  override def encodeKeys(row1: UnsafeRow, row2: UnsafeRow): Array[Byte] = {
-    val prefixKeyEncoded = encodeUnsafeRow(row1)
-    val remainingEncoded = encodeUnsafeRow(row2)
-    println("gorupingKey encode length: " + prefixKeyEncoded.length)
+  /**
+   * Supports encoding grouping key and user Key as a composite key in rocksDB.
+   * This is used for MapState.
+   * Composite key is encoded as the following format:
+   * |---size(EncodedGroupingKeyBytes)--|--EncodedGroupingKeyBytes--|--EncodedUserKeyBytes--|
+   * Size of byte array is stored as an Int.
+   */
+  override def encodeCompositeKey(groupingKeyRow: UnsafeRow, userKeyRow: UnsafeRow): Array[Byte] = {
+    val prefixKeyEncoded = encodeUnsafeRow(groupingKeyRow)
+    val remainingEncoded = encodeUnsafeRow(userKeyRow)
     val encodedBytes = new Array[Byte](prefixKeyEncoded.length + remainingEncoded.length + 4)
     Platform.putInt(encodedBytes, Platform.BYTE_ARRAY_OFFSET, prefixKeyEncoded.length)
     Platform.copyMemory(prefixKeyEncoded, Platform.BYTE_ARRAY_OFFSET,
       encodedBytes, Platform.BYTE_ARRAY_OFFSET + 4, prefixKeyEncoded.length)
-    // NOTE: We don't put the length of remainingEncoded as we can calculate later
-    // on deserialization.
     Platform.copyMemory(remainingEncoded, Platform.BYTE_ARRAY_OFFSET,
       encodedBytes, Platform.BYTE_ARRAY_OFFSET + 4 + prefixKeyEncoded.length,
       remainingEncoded.length)
-    println(s"I am inside encodeKeys: ")
-    printArrayContents(encodedBytes)
     encodedBytes
   }
 
-  def decodeKeys(keyBytes: Array[Byte]): (UnsafeRow, UnsafeRow) = {
-    // input keyBytes is the concatenation of prefix and userKey
-    println("inside decodeKeys, bytearray: ")
-    printArrayContents(keyBytes)
+  private def decodeCompositeKey(keyBytes: Array[Byte]): (UnsafeRow, UnsafeRow) = {
     val groupingKeyEncodedLen = Platform.getInt(keyBytes, Platform.BYTE_ARRAY_OFFSET)
-    println("gorupingKey length: " + groupingKeyEncodedLen)
     val groupingKeyEncoded = new Array[Byte](groupingKeyEncodedLen)
     Platform.copyMemory(keyBytes, Platform.BYTE_ARRAY_OFFSET + 4, groupingKeyEncoded,
       Platform.BYTE_ARRAY_OFFSET, groupingKeyEncodedLen)
 
-    // Here we calculate the remainingKeyEncodedLen leveraging the length of keyBytes
     val remainingKeyEncodedLen = keyBytes.length - 4 - groupingKeyEncodedLen
-
     val remainingKeyEncoded = new Array[Byte](remainingKeyEncodedLen)
     Platform.copyMemory(keyBytes, Platform.BYTE_ARRAY_OFFSET + 4 +
       groupingKeyEncodedLen, remainingKeyEncoded, Platform.BYTE_ARRAY_OFFSET,
       remainingKeyEncodedLen)
 
-    val prefixKeyDecoded = decodeToUnsafeRow(groupingKeyEncoded, 1)
-    val remainingKeyDecoded = decodeToUnsafeRow(remainingKeyEncoded, 1)
+    val prefixKeyDecoded = decodeToUnsafeRow(groupingKeyEncoded, keyRow)
+    val remainingKeyDecoded = decodeToUnsafeRow(remainingKeyEncoded, userKeyRow)
 
     (prefixKeyDecoded, remainingKeyDecoded)
   }
@@ -418,12 +422,11 @@ class StatefulProcessorStateEncoder(keySchema: StructType, valueSchema: StructTy
   override def decode(byteArrayTuple: ByteArrayPair): UnsafeRowPair = {
     decodeMultiple(byteArrayTuple)
     // rowTuple.withRows(decodeKey(byteArrayTuple.key), decodeValue(byteArrayTuple.value))
-    // rowTuple.withRows(decodeKey(byteArrayTuple.key), decodeValue(byteArrayTuple.value))
   }
 
   def decodeMultiple(byteArrayTuple: ByteArrayPair): UnsafeRowPair = {
     println("I am inside decode Multiple")
     // rowTuple.withRows(decodeKey(byteArrayTuple.key), decodeValue(byteArrayTuple.value))
-    rowTuple.withRows(decodeKeys(byteArrayTuple.key)._2, decodeValue(byteArrayTuple.value))
+    rowTuple.withRows(decodeCompositeKey(byteArrayTuple.key)._2, decodeValue(byteArrayTuple.value))
   }
 }

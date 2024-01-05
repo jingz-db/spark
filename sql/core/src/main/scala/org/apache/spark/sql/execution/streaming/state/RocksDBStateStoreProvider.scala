@@ -25,7 +25,6 @@ import org.apache.spark.{SparkConf, SparkEnv}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.UnsafeRow
 import org.apache.spark.sql.errors.QueryExecutionErrors
-import org.apache.spark.sql.execution.streaming.StateEncoder
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.util.Utils
 
@@ -55,8 +54,6 @@ private[sql] class RocksDBStateStoreProvider
 
     override def get(key: UnsafeRow, colFamilyName: String): UnsafeRow = {
       verify(key != null, "Key cannot be null")
-      println(s"i am inside get, encoded key row: ")
-      printArrayContents(encoder.encodeKey(key))
       val value = encoder.decodeValue(rocksDB.get(encoder.encodeKey(key), colFamilyName))
       if (!isValidated && value != null) {
         StateStoreProvider.validateStateRowFormat(
@@ -66,15 +63,14 @@ private[sql] class RocksDBStateStoreProvider
       value
     }
 
-    override def get(key: UnsafeRow, userKey: UnsafeRow, colFamilyName: String): UnsafeRow = {
-      verify(key != null, "Key cannot be null")
-      val encodedCompositeKey = encoder.encodeKey(key)
-      println(s"I am inside multiple key get, key row: $key, userkey row: $userKey")
-      println("I am inside multiple key get, decoded user key: " + StateEncoder.decode(userKey))
-      val value = encoder.decodeValue(rocksDB.get(encoder.encodeKeys(key, userKey), colFamilyName))
+    override def getWithCompositeKey(groupingKey: UnsafeRow,
+       userKey: UnsafeRow, colFamilyName: String): UnsafeRow = {
+      verify(groupingKey != null, "Grouping Key cannot be null")
+      val value = encoder.decodeValue(
+        rocksDB.get(encoder.encodeCompositeKey(groupingKey, userKey), colFamilyName))
       if (!isValidated && value != null) {
         StateStoreProvider.validateStateRowFormat(
-          key, keySchema, value, valueSchema, storeConf)
+          groupingKey, keySchema, value, valueSchema, storeConf)
         isValidated = true
       }
       value
@@ -82,8 +78,6 @@ private[sql] class RocksDBStateStoreProvider
 
     override def valuesIterator(key: UnsafeRow, colFamilyName: String): Iterator[UnsafeRow] = {
       verify(key != null, "Key cannot be null")
-      print(s"inside valuesIterator, row key: ${key}, encoded key: ")
-      printArrayContents(encoder.encodeKey(key))
       val valueIterator = encoder.decodeValues(rocksDB.get(encoder.encodeKey(key), colFamilyName))
 
       if (!isValidated && valueIterator.nonEmpty) {
@@ -108,19 +102,11 @@ private[sql] class RocksDBStateStoreProvider
       }
     }
 
-    def printArrayContents(arr: Array[Byte]): Unit = {
-      arr.foreach(byteValue => print(s"$byteValue "))
-      // Add a newline after printing the array elements for better readability
-      println()
-    }
-
     override def merge(key: UnsafeRow, value: UnsafeRow,
                        colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
       verify(state == UPDATING, "Cannot put after already committed or aborted")
       verify(key != null, "Key cannot be null")
       require(value != null, "Cannot put a null value")
-      print(s"inside merge, row key: $key, encoded key: ")
-      printArrayContents(encoder.encodeKey(key))
       rocksDB.merge(encoder.encodeKey(key), encoder.encodeValue(value), colFamilyName)
     }
 
@@ -128,27 +114,16 @@ private[sql] class RocksDBStateStoreProvider
       verify(state == UPDATING, "Cannot put after already committed or aborted")
       verify(key != null, "Key cannot be null")
       require(value != null, "Cannot put a null value")
-      print(s"i am inside put, encoded key row: ")
-      printArrayContents(encoder.encodeKey(key))
       rocksDB.put(encoder.encodeKey(key), encoder.encodeValue(value), colFamilyName)
     }
 
-    override def putWithMultipleKeys(key: UnsafeRow, userKey: UnsafeRow, value: UnsafeRow,
-                     colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
-      verify(state == UPDATING, "Cannot put after already committed or aborted")
-      verify(key != null, "Key cannot be null")
-      require(value != null, "Cannot put a null value")
-      println(s"I am inside putMultipleKeys: key: $key userKey: $userKey value: $value")
-      println(s"decoded userkey inside multiple key: ${StateEncoder.decode(userKey)}")
-      rocksDB.put(encoder.encodeKeys(key, userKey), encoder.encodeValue(value), colFamilyName)
-    }
-
-    override def removeWithMultipleKeys(key: UnsafeRow, userKey: UnsafeRow,
+    override def putWithCompositeKey(groupingKey: UnsafeRow, userKey: UnsafeRow, value: UnsafeRow,
         colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
-      verify(state == UPDATING, "Cannot remove after already committed or aborted")
-      verify(key != null, "Key cannot be null")
-      println("I am inside remove multiple keys")
-      rocksDB.remove(encoder.encodeKeys(key, userKey), colFamilyName)
+      verify(state == UPDATING, "Cannot put after already committed or aborted")
+      verify(groupingKey != null, "Key cannot be null")
+      require(value != null, "Cannot put a null value")
+      rocksDB.put(encoder.encodeCompositeKey(groupingKey, userKey),
+        encoder.encodeValue(value), colFamilyName)
     }
 
     override def remove(key: UnsafeRow, colFamilyName: String): Unit = {
@@ -157,8 +132,14 @@ private[sql] class RocksDBStateStoreProvider
       rocksDB.remove(encoder.encodeKey(key), colFamilyName)
     }
 
+    override def removeWithCompositeKey(groupingKey: UnsafeRow, userKey: UnsafeRow,
+        colFamilyName: String = StateStore.DEFAULT_COL_FAMILY_NAME): Unit = {
+      verify(state == UPDATING, "Cannot remove after already committed or aborted")
+      verify(groupingKey != null, "Grouping Key cannot be null")
+      rocksDB.remove(encoder.encodeCompositeKey(groupingKey, userKey), colFamilyName)
+    }
+
     override def iterator(colFamilyName: String): Iterator[UnsafeRowPair] = {
-      println("I am here inside iterator")
       rocksDB.iterator(colFamilyName).map { kv =>
         val rowPair = encoder.decode(kv)
         if (!isValidated && rowPair.value != null) {
@@ -178,10 +159,8 @@ private[sql] class RocksDBStateStoreProvider
       val prefix = encoder.encodePrefixKey(prefixKey)
       rocksDB.prefixScan(prefix, colFamilyName).map(kv => encoder.decode(kv))
        */
-      println("I am inside prefix Scan+++++++")
+
       val prefix = encoder.encodePrefixKey(prefixKey)
-      println(s"prefixKey row: $prefixKey, after encoding to bytes: ")
-      printArrayContents(prefix)
 
       val res = rocksDB.prefixScan(prefix, colFamilyName).map(kv => encoder.decode(kv))
       println("res has next: " + res.hasNext)
