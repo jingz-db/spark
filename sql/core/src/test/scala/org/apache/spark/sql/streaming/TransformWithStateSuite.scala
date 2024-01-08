@@ -24,6 +24,10 @@ import org.apache.spark.sql.execution.streaming._
 import org.apache.spark.sql.execution.streaming.state.{AlsoTestWithChangelogCheckpointingEnabled, RocksDBStateStoreProvider}
 import org.apache.spark.sql.internal.SQLConf
 
+object TransformWithStateSuiteUtils {
+  val NUM_SHUFFLE_PARTITIONS = 5
+}
+
 class RunningCountStatefulProcessor extends StatefulProcessor[String, String, (String, String)]
   with Logging {
   @transient private var _countState: ValueState[Long] = _
@@ -35,15 +39,16 @@ class RunningCountStatefulProcessor extends StatefulProcessor[String, String, (S
     _processorHandle = handle
     assert(handle.getQueryInfo().getBatchId >= 0)
     assert(handle.getQueryInfo().getOperatorId == 0)
-    assert(handle.getQueryInfo().getPartitionId >= 0 && handle.getQueryInfo().getPartitionId < 5)
+    assert(handle.getQueryInfo().getPartitionId >= 0 &&
+      handle.getQueryInfo().getPartitionId < TransformWithStateSuiteUtils.NUM_SHUFFLE_PARTITIONS)
     _countState = _processorHandle.getValueState[Long]("countState")
   }
 
-  override def handleInputRows(
+  override def handleInputRow(
       key: String,
-      inputRows: Iterator[String],
+      inputRow: String,
       timerValues: TimerValues): Iterator[(String, String)] = {
-    val count = _countState.getOption().getOrElse(0L) + inputRows.size
+    val count = _countState.getOption().getOrElse(0L) + 1
     if (count == 3) {
       _countState.remove()
       Iterator.empty
@@ -59,9 +64,9 @@ class RunningCountStatefulProcessor extends StatefulProcessor[String, String, (S
 class RunningCountStatefulProcessorWithError extends RunningCountStatefulProcessor {
   @transient private var _tempState: ValueState[Long] = _
 
-  override def handleInputRows(
+  override def handleInputRow(
       key: String,
-      inputRows: Iterator[String],
+      inputRow: String,
       timerValues: TimerValues): Iterator[(String, String)] = {
     // Trying to create value state here should fail
     _tempState = _processorHandle.getValueState[Long]("tempState")
@@ -79,12 +84,14 @@ class TransformWithStateSuite extends StateStoreMetricsTest
 
   test("transformWithState - streaming with rocksdb and invalid processor should fail") {
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
-      classOf[RocksDBStateStoreProvider].getName) {
+      classOf[RocksDBStateStoreProvider].getName,
+      SQLConf.SHUFFLE_PARTITIONS.key ->
+      TransformWithStateSuiteUtils.NUM_SHUFFLE_PARTITIONS.toString) {
       val inputData = MemoryStream[String]
       val result = inputData.toDS()
         .groupByKey(x => x)
         .transformWithState(new RunningCountStatefulProcessorWithError(),
-          TimeoutMode.noTimeouts(),
+          TimeoutMode.NoTimeouts(),
           OutputMode.Update())
 
       testStream(result, OutputMode.Update())(
@@ -99,12 +106,14 @@ class TransformWithStateSuite extends StateStoreMetricsTest
 
   test("transformWithState - streaming with rocksdb should succeed") {
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
-      classOf[RocksDBStateStoreProvider].getName) {
+      classOf[RocksDBStateStoreProvider].getName,
+      SQLConf.SHUFFLE_PARTITIONS.key ->
+      TransformWithStateSuiteUtils.NUM_SHUFFLE_PARTITIONS.toString) {
       val inputData = MemoryStream[String]
       val result = inputData.toDS()
         .groupByKey(x => x)
         .transformWithState(new RunningCountStatefulProcessor(),
-          TimeoutMode.noTimeouts(),
+          TimeoutMode.NoTimeouts(),
           OutputMode.Update())
 
       testStream(result, OutputMode.Update())(
@@ -133,7 +142,7 @@ class TransformWithStateValidationSuite extends StateStoreMetricsTest {
       val df = Seq("a", "a", "b").toDS()
         .groupByKey(x => x)
         .transformWithState(new RunningCountStatefulProcessor,
-          TimeoutMode.noTimeouts(),
+          TimeoutMode.NoTimeouts(),
           OutputMode.Append())
         .write
         .format("noop")
@@ -149,7 +158,7 @@ class TransformWithStateValidationSuite extends StateStoreMetricsTest {
     val result = inputData.toDS()
       .groupByKey(x => x)
       .transformWithState(new RunningCountStatefulProcessor(),
-        TimeoutMode.noTimeouts(),
+        TimeoutMode.NoTimeouts(),
         OutputMode.Update())
 
     testStream(result, OutputMode.Update())(
