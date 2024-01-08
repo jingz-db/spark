@@ -26,12 +26,12 @@ class MapStateImpl[K, V](store: StateStore,
 
   /** Whether state exists or not. */
   override def exists(): Boolean = {
-    val encodedGroupingKey = StateEncoder.encodeKey(stateName)
-    !store.prefixScan(encodedGroupingKey, stateName).isEmpty
+    !store.prefixScan(StateEncoder.encodeKey(stateName), stateName).isEmpty
   }
 
   /** Get the state value if it exists */
   override def getValue(key: K): V = {
+    require(key != null, "User key cannot be null.")
     val encodedGroupingKey = StateEncoder.encodeKey(stateName)
     val encodeUserKey = StateEncoder.encodeUserKey(key)
     val unsafeRowValue = store.getWithCompositeKey(encodedGroupingKey, encodeUserKey, stateName)
@@ -44,6 +44,7 @@ class MapStateImpl[K, V](store: StateStore,
 
   /** Check if the user key is contained in the map */
   override def containsKey(key: K): Boolean = {
+    require(key != null, "User key cannot be null.")
     try {
       getValue(key) != null
     } catch {
@@ -53,6 +54,8 @@ class MapStateImpl[K, V](store: StateStore,
 
   /** Update value for given user key */
   override def updateValue(key: K, value: V): Unit = {
+    require(key != null, "User key cannot be null.")
+    require(value != null, "Value put to map cannot be null.")
     val encodedValue = StateEncoder.encodeValue(value)
     val encodedKey = StateEncoder.encodeKey(stateName)
     val encodedUserKey = StateEncoder.encodeUserKey(key)
@@ -81,6 +84,7 @@ class MapStateImpl[K, V](store: StateStore,
 
   /** Remove user key from map state */
   override def removeKey(key: K): Unit = {
+    require(key != null, "User key cannot be null.")
     val encodedKey = StateEncoder.encodeKey(stateName)
     val encodedUserKey = StateEncoder.encodeUserKey(key)
     store.removeWithCompositeKey(encodedKey, encodedUserKey, stateName)
