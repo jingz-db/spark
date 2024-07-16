@@ -262,8 +262,6 @@ class CompositeKeyStateEncoder[K, V](
     val realUserKey =
       if (userKey.isInstanceOf[String]) UTF8String.fromString(userKey.asInstanceOf[String])
       else userKey
-    println("I am inside encode Composite key, composite key schema: " +
-      schemaForCompositeKeyRow)
 
     // Create the nested InternalRows for the inner structs (value)
     val keyRow = new GenericInternalRow(Array[Any](realGroupingKey))
@@ -273,12 +271,7 @@ class CompositeKeyStateEncoder[K, V](
     val compositeRow = new GenericInternalRow(Array[Any](keyRow, userKeyRow))
 
     val compositeKey = compositeKeyProjection(compositeRow)
-    println("I am putting unsafe row into rocksDB: " + decodeCompositeKey(compositeKey))
-    println("inside encode composite key, num of composite field: " + compositeKey.numFields())
-
     val decode = compositeKey.getString(0)
-    println("inside encode composite key, first field: " + decode)
-
     compositeKey
   }
 

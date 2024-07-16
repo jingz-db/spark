@@ -35,8 +35,6 @@ class MapStateImpl[K, V](
   private val schemaForCompositeKeyRow: StructType = {
     getCompositeKeySchema(keyExprEnc.schema, userKeyEnc.schema)
   }
-  println("I am inside MapStateImpl, realComposite Key schema: " +
-    schemaForCompositeKeyRow)
   private val schemaForValueRow: StructType = valEncoder.schema
   private val stateTypesEncoder = new CompositeKeyStateEncoder(
     keyExprEnc, userKeyEnc, valEncoder, stateName)
