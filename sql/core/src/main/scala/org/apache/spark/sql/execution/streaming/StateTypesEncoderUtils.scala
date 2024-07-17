@@ -21,6 +21,7 @@ import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.{encoderFor, ExpressionEncoder}
 import org.apache.spark.sql.catalyst.expressions.{GenericInternalRow, UnsafeProjection, UnsafeRow}
+import org.apache.spark.sql.execution.streaming.TransformWithStateKeyValueRowSchema.getPqKeySchema
 import org.apache.spark.sql.execution.streaming.state.StateStoreErrors
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
@@ -51,6 +52,16 @@ object TransformWithStateKeyValueRowSchema {
     new StructType()
       .add("key", new StructType(groupingKeySchema.fields))
       .add("userKey", new StructType(userKeySchema.fields))
+  }
+
+  def getPqKeySchema(
+      groupingKeySchema: StructType,
+      valueSchema: StructType): StructType = {
+    new StructType()
+      .add("priority", LongType)
+      .add("key", new StructType(groupingKeySchema.fields))
+      .add("value", new StructType(valueSchema.fields))
+      .add("uuid", StringType)
   }
 
   // keyEncoder.schema will attach a default "value" as field name if
@@ -290,3 +301,62 @@ class CompositeKeyStateEncoder[K, V](
     userKeyRowToObjDeserializer.apply(row.getStruct(1, 1))
   }
 }
+
+class PQKeyStateEncoder[V](
+    keyEncoder: ExpressionEncoder[Any],
+    valEncoder: Encoder[V],
+    stateName: String,
+    hasTtl: Boolean = false)
+  extends StateTypesEncoder[V](keyEncoder, valEncoder, stateName, hasTtl) {
+
+  private val compositeKeySchema = getPqKeySchema(keyEncoder.schema, valEncoder.schema)
+  private val compositeKeyProjection = UnsafeProjection.create(compositeKeySchema)
+  private val valExpressionEnc = encoderFor(valEncoder)
+  private val objToRowSerializer = valExpressionEnc.createSerializer()
+  private val rowToObjDeserializer = valExpressionEnc.resolveAndBind().createDeserializer()
+
+  private def decodePriority(row: UnsafeRow): Long = {
+    val compositeKey = compositeKeyProjection(row)
+    compositeKey.getLong(0)
+  }
+
+  def encodeCompositeKey(
+      priority: Long,
+      value: V,
+      uuid: String): UnsafeRow = {
+    val keyOption = ImplicitGroupingKeyTracker.getImplicitKeyOption
+    if (keyOption.isEmpty) {
+      throw StateStoreErrors.implicitKeyNotFound(stateName)
+    }
+    val groupingKey = keyOption.get
+
+    val realGroupingKey =
+      if (groupingKey.isInstanceOf[String]) UTF8String.fromString(groupingKey.asInstanceOf[String])
+      else groupingKey
+
+    val keyRow = new GenericInternalRow(Array[Any](realGroupingKey))
+    val valueRow = objToRowSerializer.apply(value)
+    compositeKeyProjection(
+      InternalRow(priority, keyRow, valueRow, UTF8String.fromString(uuid)))
+  }
+
+  private def decodeGroupingKey(row: UnsafeRow): Array[Byte] = {
+    val compositeKey = compositeKeyProjection(row)
+    compositeKey.getBinary(1)
+  }
+
+  override def decodeValue(row: UnsafeRow): V = {
+    val compositeKey = compositeKeyProjection(row)
+    rowToObjDeserializer.apply(compositeKey.getStruct(2, 1))
+  }
+
+  def decodeUUID(row: UnsafeRow): String = {
+    val compositeKey = compositeKeyProjection(row)
+    compositeKey.getString(3)
+  }
+
+  def decodeCompositeKey(row: UnsafeRow): (Long, Array[Byte], V, Long) = {
+    (decodePriority(row), decodeGroupingKey(row), decodeValue(row), decodeUUID(row))
+  }
+}
+

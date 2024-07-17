@@ -72,6 +72,11 @@ private[sql] trait StatefulProcessorHandle extends Serializable {
    */
   def getListState[T](stateName: String, valEncoder: Encoder[T]): ListState[T]
 
+  def getPriorityQueueState[T](
+      stateName: String,
+      valEncoder: Encoder[T],
+      comparator: T => Long): PriorityQueueState[T]
+
   /**
    * Function to create new or return existing list state variable of given type
    * with ttl. State values will not be returned past ttlDuration, and will be eventually removed

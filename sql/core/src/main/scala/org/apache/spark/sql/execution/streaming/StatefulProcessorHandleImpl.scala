@@ -28,7 +28,7 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.execution.metric.SQLMetric
 import org.apache.spark.sql.execution.streaming.StatefulProcessorHandleState.PRE_INIT
 import org.apache.spark.sql.execution.streaming.state._
-import org.apache.spark.sql.streaming.{ListState, MapState, QueryInfo, TimeMode, TTLConfig, ValueState}
+import org.apache.spark.sql.streaming.{ListState, MapState, PriorityQueueState, QueryInfo, TimeMode, TTLConfig, ValueState}
 import org.apache.spark.util.Utils
 
 /**
@@ -254,6 +254,14 @@ class StatefulProcessorHandleImpl(
     listStateWithTTL
   }
 
+
+  override def getPriorityQueueState[T](
+      stateName: String,
+      valEncoder: Encoder[T],
+      comparator: T => Long): PriorityQueueState[T] = {
+    new PriorityQueueStateImpl[T](store, stateName, keyEncoder, valEncoder, comparator)
+  }
+
   override def getMapState[K, V](
       stateName: String,
       userKeyEnc: Encoder[K],
@@ -345,6 +353,13 @@ class DriverStatefulProcessorHandleImpl(timeMode: TimeMode, keyExprEnc: Expressi
       getListStateSchema(stateName, keyExprEnc, valEncoder, true)
     columnFamilySchemas.put(stateName, colFamilySchema)
     null.asInstanceOf[ListState[T]]
+  }
+
+  override def getPriorityQueueState[T](
+      stateName: String,
+      valEncoder: Encoder[T],
+      comparator: T => Long): PriorityQueueState[T] = {
+    null.asInstanceOf[PriorityQueueState[T]]
   }
 
   override def getMapState[K, V](
