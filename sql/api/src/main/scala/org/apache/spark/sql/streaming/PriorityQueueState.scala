@@ -26,7 +26,7 @@ private[sql] trait PriorityQueueState[S] extends Serializable {
   def poll(): Option[S]
 
   /** Append an entry to the list */
-  def offer(newState: S): Unit
+  def offer(newState: S, priority: Long): Unit
 
   /** Removes this state for the given grouping key. */
   def clear(): Unit

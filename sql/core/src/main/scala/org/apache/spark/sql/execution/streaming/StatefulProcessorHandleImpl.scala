@@ -257,9 +257,8 @@ class StatefulProcessorHandleImpl(
 
   override def getPriorityQueueState[T](
       stateName: String,
-      valEncoder: Encoder[T],
-      comparator: T => Long): PriorityQueueState[T] = {
-    new PriorityQueueStateImpl[T](store, stateName, keyEncoder, valEncoder, comparator)
+      valEncoder: Encoder[T]): PriorityQueueState[T] = {
+    new PriorityQueueStateImpl[T](store, stateName, keyEncoder, valEncoder)
   }
 
   override def getMapState[K, V](
@@ -357,8 +356,7 @@ class DriverStatefulProcessorHandleImpl(timeMode: TimeMode, keyExprEnc: Expressi
 
   override def getPriorityQueueState[T](
       stateName: String,
-      valEncoder: Encoder[T],
-      comparator: T => Long): PriorityQueueState[T] = {
+      valEncoder: Encoder[T]): PriorityQueueState[T] = {
     null.asInstanceOf[PriorityQueueState[T]]
   }
 

@@ -31,9 +31,8 @@ class PriorityQueueStateImpl[S](
     store: StateStore,
     stateName: String,
     keyExprEnc: ExpressionEncoder[Any],
-    valEncoder: Encoder[S],
-    comparator: S => Long)
-  extends PQStateImpl(stateName, store) with PriorityQueueState[S] with Logging {
+    valEncoder: Encoder[S])
+  extends PriorityQueueState[S] with Logging {
 
   private val stateTypesEncoder = new PQKeyStateEncoder(
     keyExprEnc,
@@ -54,7 +53,7 @@ class PriorityQueueStateImpl[S](
 
   /** Whether state exists or not. */
   override def exists(): Boolean = {
-    super.exists()
+    store.iterator(stateName).hasNext
   }
 
   /** Get the state value. An empty iterator is returned if no value exists. */
@@ -71,9 +70,7 @@ class PriorityQueueStateImpl[S](
     val iterator = store.iterator(stateName)
     if (iterator.hasNext) {
       val kv = iterator.next()
-      val uuid = stateTypesEncoder.decodeUUID(kv.key)
       store.remove(kv.key, stateName)
-      removePQForStateKey(kv.key.getBinary(1), uuid)
       Some(stateTypesEncoder.decodeValue(kv.key))
     } else {
       None
@@ -81,13 +78,10 @@ class PriorityQueueStateImpl[S](
   }
 
   /** Append an entry to the list */
-  override def offer(newState: S): Unit = {
-    val priority = comparator(newState)
+  override def offer(newState: S, priority: Long): Unit = {
     val uuid = UUID.randomUUID().toString
     val keyRow = stateTypesEncoder.encodeCompositeKey(priority, newState, uuid)
     store.put(keyRow, EMPTY_ROW, stateName)
-    val serializedGroupingKey = stateTypesEncoder.encodeGroupingKey()
-    upsertPQForStateKey(serializedGroupingKey.getBytes, uuid)
   }
 
   /** Removes this state for the given grouping key. */

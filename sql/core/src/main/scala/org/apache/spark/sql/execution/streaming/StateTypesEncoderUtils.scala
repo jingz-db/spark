@@ -355,7 +355,7 @@ class PQKeyStateEncoder[V](
     compositeKey.getString(3)
   }
 
-  def decodeCompositeKey(row: UnsafeRow): (Long, Array[Byte], V, Long) = {
+  def decodeCompositeKey(row: UnsafeRow): (Long, Array[Byte], V, String) = {
     (decodePriority(row), decodeGroupingKey(row), decodeValue(row), decodeUUID(row))
   }
 }

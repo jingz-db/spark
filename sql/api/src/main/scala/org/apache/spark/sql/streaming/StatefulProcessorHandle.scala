@@ -74,8 +74,7 @@ private[sql] trait StatefulProcessorHandle extends Serializable {
 
   def getPriorityQueueState[T](
       stateName: String,
-      valEncoder: Encoder[T],
-      comparator: T => Long): PriorityQueueState[T]
+      valEncoder: Encoder[T]): PriorityQueueState[T]
 
   /**
    * Function to create new or return existing list state variable of given type

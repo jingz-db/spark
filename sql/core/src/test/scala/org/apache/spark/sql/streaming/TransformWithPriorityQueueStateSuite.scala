@@ -33,7 +33,7 @@ class PriorityQueueStatefulProcessor
       outputMode: OutputMode,
       timeMode: TimeMode): Unit = {
     _pq = getHandle
-      .getPriorityQueueState("valueState", Encoders.scalaInt, (i: Int) => i.toLong)
+      .getPriorityQueueState("valueState", Encoders.scalaInt)
       .asInstanceOf[PriorityQueueState[Int]]
   }
 
@@ -43,9 +43,9 @@ class PriorityQueueStatefulProcessor
       timerValues: TimerValues,
       expiredTimerInfo: ExpiredTimerInfo): Iterator[Int] = {
     inputRows.foreach { inputRow =>
-      _pq.offer(inputRow.value)
+      _pq.offer(inputRow.value, inputRow.value.toLong)
     }
-    _pq.get()
+    _pq.poll().iterator
   }
 }
 class TransformWithPriorityQueueStateSuite extends StreamTest {
@@ -68,7 +68,11 @@ class TransformWithPriorityQueueStateSuite extends StreamTest {
           PQInputEvent("a", 3),
           PQInputEvent("a", 2),
           PQInputEvent("a", 1)),
-        CheckNewAnswer(1, 2, 3)
+        CheckNewAnswer(1),
+        AddData(inputData,
+          PQInputEvent("a", 4),
+          PQInputEvent("a", 5)),
+        CheckNewAnswer(2)
       )
     }
   }
