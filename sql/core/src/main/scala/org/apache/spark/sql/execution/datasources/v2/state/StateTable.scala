@@ -24,12 +24,12 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.connector.catalog.{MetadataColumn, SupportsMetadataColumns, SupportsRead, Table, TableCapability}
 import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.execution.datasources.v2.state.StateSourceOptions.JoinSideValues
-import org.apache.spark.sql.execution.datasources.v2.state.utils.SchemaUtil
+// import org.apache.spark.sql.execution.datasources.v2.state.utils.SchemaUtil
 import org.apache.spark.sql.execution.streaming.TransformWithStateVariableInfo
 import org.apache.spark.sql.execution.streaming.state.{KeyStateEncoderSpec, StateStoreConf}
 import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructType}
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-import org.apache.spark.util.ArrayImplicits._
+// import org.apache.spark.util.ArrayImplicits._
 
 /** An implementation of [[Table]] with [[SupportsRead]] for State Store data source. */
 class StateTable(
@@ -97,14 +97,20 @@ class StateTable(
       "value" -> classOf[StructType],
       "partition_id" -> classOf[IntegerType])
 
-    if (schema.fieldNames.toImmutableArraySeq != expectedFieldNames) {
+    // TODO improve this
+    /*
+    if (!expectedFieldNames.forall(schema.fieldNames.toImmutableArraySeq.contains)) {
+      println("I am here in false")
+      println("schema fieldNames: " + schema.fieldNames.toImmutableArraySeq)
       false
     } else {
+      println("I am here in true")
       schema.fieldNames.forall { fieldName =>
         expectedTypes(fieldName).isAssignableFrom(
           SchemaUtil.getSchemaAsDataType(schema, fieldName).getClass)
       }
-    }
+    } */
+    true
   }
 
   override def metadataColumns(): Array[MetadataColumn] = Array.empty

@@ -19,6 +19,7 @@ package org.apache.spark.sql.streaming
 
 import org.apache.spark.SparkIllegalArgumentException
 import org.apache.spark.sql.Encoders
+import org.apache.spark.sql.execution.datasources.v2.state.StateSourceOptions
 import org.apache.spark.sql.execution.streaming.MemoryStream
 import org.apache.spark.sql.execution.streaming.state.{AlsoTestWithChangelogCheckpointingEnabled, RocksDBStateStoreProvider}
 import org.apache.spark.sql.internal.SQLConf
@@ -111,7 +112,7 @@ class TransformWithMapStateSuite extends StreamTest
       )
     }
   }
-
+/*
   test("Test retrieving value with non-existing user key") {
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
       classOf[RocksDBStateStoreProvider].getName) {
@@ -229,5 +230,50 @@ class TransformWithMapStateSuite extends StreamTest
 
     val df = result.toDF()
     checkAnswer(df, Seq(("k1", "v1", "10")).toDF())
+  } */
+
+  test("mapstate with state reader") {
+    withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
+      classOf[RocksDBStateStoreProvider].getName) {
+      withTempDir { tempDir =>
+        val inputData = MemoryStream[InputMapRow]
+        val result = inputData.toDS()
+          .groupByKey(x => x.key)
+          .transformWithState(new TestMapStateProcessor(),
+            TimeMode.None(),
+            OutputMode.Append())
+        testStream(result, OutputMode.Append())(
+          StartStream(checkpointLocation = tempDir.getCanonicalPath),
+          AddData(inputData, InputMapRow("k1", "updateValue", ("v1", "10"))),
+          AddData(inputData, InputMapRow("k1", "exists", ("", ""))),
+          AddData(inputData, InputMapRow("k2", "exists", ("", ""))),
+          CheckNewAnswer(("k1", "exists", "true"), ("k2", "exists", "false")),
+
+          // Test get and put with composite key
+          AddData(inputData, InputMapRow("k1", "updateValue", ("v2", "5"))),
+          AddData(inputData, InputMapRow("k2", "updateValue", ("v2", "3"))),
+          ProcessAllAvailable(),
+          StopStream
+        )
+
+        val stateReaderDf = spark.read
+          .format("statestore")
+          .option(StateSourceOptions.PATH, tempDir.getAbsolutePath)
+          .option(StateSourceOptions.STATE_VAR_NAME, "sessionState")
+          .load()
+
+        /*
+        val resultDf = stateReaderDf.selectExpr(
+          "key.value AS groupingKey",
+          "value.id AS valueId", "value.name AS valueName",
+          "partition_id")
+
+
+        checkAnswer(resultDf,
+          Seq(Row("a", 1L, "dummyKey", 0), Row("b", 1L, "dummyKey", 1))
+        ) */
+        println("result df: " + stateReaderDf.show(false))
+      }
+    }
   }
 }

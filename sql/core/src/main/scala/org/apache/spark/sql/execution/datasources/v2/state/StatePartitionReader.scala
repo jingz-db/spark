@@ -66,6 +66,15 @@ abstract class StatePartitionReaderBase(
   extends PartitionReader[InternalRow] with Logging {
   protected val keySchema = SchemaUtil.getSchemaAsDataType(
     schema, "key").asInstanceOf[StructType]
+  protected val userKeySchema: Option[StructType] = {
+    try {
+      Option(
+        SchemaUtil.getSchemaAsDataType(schema, "userKey").asInstanceOf[StructType])
+    } catch {
+      case _: Exception =>
+        None
+    }
+  }
   protected val valueSchema = SchemaUtil.getSchemaAsDataType(
     schema, "value").asInstanceOf[StructType]
 
@@ -164,6 +173,12 @@ class StatePartitionReader(
                 } else {
                   unifyStateRowPair((pair.key, pair.value))
                 }
+              case StateVariableType.MapState =>
+                if (hasTTLEnabled) {
+                  unifyMapStateRowPairWithTTL((pair.key, pair.value))
+                } else {
+                  unifyMapStateRowPair((pair.key, pair.value))
+                }
 
               case _ =>
                 throw new IllegalStateException(
@@ -195,6 +210,25 @@ class StatePartitionReader(
     row.update(1, pair._2.get(0, valueSchema))
     row.update(2, pair._2.get(1, LongType))
     row.update(3, partition.partition)
+    row
+  }
+
+  private def unifyMapStateRowPair(pair: (UnsafeRow, UnsafeRow)): InternalRow = {
+    val row = new GenericInternalRow(4)
+    row.update(0, pair._1.get(0, keySchema))
+    row.update(1, pair._1.get(1, userKeySchema.get))
+    row.update(2, pair._2)
+    row.update(3, partition.partition)
+    row
+  }
+
+  private def unifyMapStateRowPairWithTTL(pair: (UnsafeRow, UnsafeRow)): InternalRow = {
+    val row = new GenericInternalRow(5)
+    row.update(0, pair._1.get(0, keySchema))
+    row.update(1, pair._1.get(1, userKeySchema.get))
+    row.update(2, pair._2.get(0, valueSchema))
+    row.update(3, pair._2.get(1, LongType))
+    row.update(4, partition.partition)
     row
   }
 
