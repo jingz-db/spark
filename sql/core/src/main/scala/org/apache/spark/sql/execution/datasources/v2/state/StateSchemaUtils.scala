@@ -18,6 +18,7 @@ package org.apache.spark.sql.execution.datasources.v2.state
 
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{GenericInternalRow, UnsafeRow}
+import org.apache.spark.sql.execution.datasources.v2.state.utils.SchemaUtil
 import org.apache.spark.sql.execution.streaming.{StateVariableType, TransformWithStateVariableInfo}
 import org.apache.spark.sql.execution.streaming.state.StateStoreColFamilySchema
 import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructType}
@@ -44,6 +45,25 @@ object StateSchemaUtils {
         } else {
           new StructType()
             .add("key", stateStoreColFamilySchema.keySchema)
+            .add("value", stateStoreColFamilySchema.valueSchema)
+            .add("partition_id", IntegerType)
+        }
+
+      case StateVariableType.MapState =>
+        val groupingKeySchema = SchemaUtil.getSchemaAsDataType(
+          stateStoreColFamilySchema.keySchema, "key")
+        val userKeySchema = stateStoreColFamilySchema.userKeyEncoderSchema.get
+        if (hasTTLEnabled) {
+          new StructType()
+            .add("key", groupingKeySchema)
+            .add("userKey", userKeySchema)
+            .add("value", stateStoreColFamilySchema.valueSchema)
+            .add("expiration_timestamp", LongType)
+            .add("partition_id", IntegerType)
+        } else {
+          new StructType()
+            .add("key", groupingKeySchema)
+            .add("userKey", userKeySchema)
             .add("value", stateStoreColFamilySchema.valueSchema)
             .add("partition_id", IntegerType)
         }
@@ -95,6 +115,34 @@ object StateSchemaUtils {
     row.update(1, pair._2.get(0, valueSchema))
     row.update(2, pair._2.get(1, LongType))
     row.update(3, partition)
+    row
+  }
+
+  def unifyMapStateRowPair(
+      pair: (UnsafeRow, UnsafeRow),
+      groupingKeySchema: StructType,
+      userKeySchema: StructType,
+      partition: Int): InternalRow = {
+    val row = new GenericInternalRow(4)
+    row.update(0, pair._1.get(0, groupingKeySchema))
+    row.update(1, pair._1.get(1, userKeySchema))
+    row.update(2, pair._2)
+    row.update(3, partition)
+    row
+  }
+
+  def unifyMapStateRowPairWithTTL(
+      pair: (UnsafeRow, UnsafeRow),
+      groupingKeySchema: StructType,
+      userKeySchema: StructType,
+      valueSchema: StructType,
+      partition: Int): InternalRow = {
+    val row = new GenericInternalRow(5)
+    row.update(0, pair._1.get(0, groupingKeySchema))
+    row.update(1, pair._1.get(1, userKeySchema))
+    row.update(2, pair._2.get(0, valueSchema))
+    row.update(3, pair._2.get(1, LongType))
+    row.update(4, partition)
     row
   }
 }

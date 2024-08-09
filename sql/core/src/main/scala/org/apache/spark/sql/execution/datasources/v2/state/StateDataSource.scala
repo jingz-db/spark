@@ -176,50 +176,6 @@ class StateDataSource extends TableProvider with DataSourceRegister with Logging
     keyStateEncoderSpec
   }
 
-  private def generateSchemaForStateVar(
-      stateVarInfo: TransformWithStateVariableInfo,
-      stateStoreColFamilySchema: StateStoreColFamilySchema): StructType = {
-    val stateVarType = stateVarInfo.stateVariableType
-    val hasTTLEnabled = stateVarInfo.ttlEnabled
-
-    stateVarType match {
-      case StateVariableType.ValueState =>
-        if (hasTTLEnabled) {
-          new StructType()
-            .add("key", stateStoreColFamilySchema.keySchema)
-            .add("value", stateStoreColFamilySchema.valueSchema)
-            .add("expiration_timestamp", LongType)
-            .add("partition_id", IntegerType)
-        } else {
-          new StructType()
-            .add("key", stateStoreColFamilySchema.keySchema)
-            .add("value", stateStoreColFamilySchema.valueSchema)
-            .add("partition_id", IntegerType)
-        }
-
-      case StateVariableType.MapState =>
-        val groupingKeySchema = SchemaUtil.getSchemaAsDataType(
-          stateStoreColFamilySchema.keySchema, "key")
-        val userKeySchema = stateStoreColFamilySchema.userKeyEncoderSchema.get
-        if (hasTTLEnabled) {
-          new StructType()
-            .add("key", groupingKeySchema)
-            .add("userKey", userKeySchema)
-            .add("value", stateStoreColFamilySchema.valueSchema)
-            .add("expiration_timestamp", LongType)
-            .add("partition_id", IntegerType)
-        } else {
-          new StructType()
-            .add("key", groupingKeySchema)
-            .add("userKey", userKeySchema)
-            .add("value", stateStoreColFamilySchema.valueSchema)
-            .add("partition_id", IntegerType)
-        }
-      case _ =>
-        throw StateDataSourceErrors.internalError(s"Unsupported state variable type $stateVarType")
-    }
-  }
-
   override def inferSchema(options: CaseInsensitiveStringMap): StructType = {
     val partitionId = StateStore.PARTITION_ID_TO_CHECK_SCHEMA
     val sourceOptions = StateSourceOptions.apply(session, hadoopConf, options)
@@ -246,7 +202,6 @@ class StateDataSource extends TableProvider with DataSourceRegister with Logging
 
           val stateVarName = sourceOptions.stateVarName
             .getOrElse(StateStore.DEFAULT_COL_FAMILY_NAME)
-          println("stateVarName here:" + stateVarName)
 
           // Read the schema file path from operator metadata version v2 onwards
           val oldSchemaFilePath = if (storeMetadata.length > 0 && storeMetadata.head.version == 2) {

@@ -174,11 +174,14 @@ class StatePartitionReader(
                 } else {
                   StateSchemaUtils.unifyStateRowPair((pair.key, pair.value), partition.partition)
                 }
+
               case StateVariableType.MapState =>
                 if (hasTTLEnabled) {
-                  unifyMapStateRowPairWithTTL((pair.key, pair.value))
+                  StateSchemaUtils.unifyMapStateRowPairWithTTL((pair.key, pair.value),
+                    keySchema, userKeySchema.get, valueSchema, partition.partition)
                 } else {
-                  unifyMapStateRowPair((pair.key, pair.value))
+                  StateSchemaUtils.unifyMapStateRowPair((pair.key, pair.value),
+                    keySchema, userKeySchema.get, partition.partition)
                 }
 
               case _ =>
