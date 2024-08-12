@@ -232,7 +232,7 @@ class TransformWithMapStateSuite extends StreamTest
     checkAnswer(df, Seq(("k1", "v1", "10")).toDF())
   }
 
-  test("mapstate with state reader") {
+  test("state data source integration - map state with single variable") {
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
       classOf[RocksDBStateStoreProvider].getName,
       SQLConf.SHUFFLE_PARTITIONS.key ->

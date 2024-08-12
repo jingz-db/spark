@@ -20,6 +20,7 @@ package org.apache.spark.sql.streaming
 import java.time.Duration
 
 import org.apache.spark.sql.Encoders
+import org.apache.spark.sql.execution.datasources.v2.state.StateSourceOptions
 import org.apache.spark.sql.execution.streaming.{MapStateImplWithTTL, MemoryStream}
 import org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider
 import org.apache.spark.sql.internal.SQLConf
@@ -317,6 +318,66 @@ class TransformWithMapStateTTLSuite extends TransformWithStateTTLTest {
         ),
         StopStream
       )
+    }
+  }
+
+  // enable the suites once VCF integration PR is merged
+  ignore("state data source integration - map state TTL with single variable") {
+    withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
+      classOf[RocksDBStateStoreProvider].getName,
+      SQLConf.SHUFFLE_PARTITIONS.key -> "1") {
+      withTempDir { tempDir =>
+        val inputStream = MemoryStream[MapInputEvent]
+        val ttlConfig = TTLConfig(ttlDuration = Duration.ofMinutes(1))
+        val result = inputStream.toDS()
+          .groupByKey(x => x.key)
+          .transformWithState(
+            new MapStateTTLProcessor(ttlConfig),
+            TimeMode.ProcessingTime(),
+            OutputMode.Append())
+
+        val clock = new StreamManualClock
+        testStream(result)(
+          StartStream(Trigger.ProcessingTime("1 second"), triggerClock = clock,
+            checkpointLocation = tempDir.getCanonicalPath),
+          AddData(inputStream,
+            MapInputEvent("k1", "key1", "put", 1),
+            MapInputEvent("k1", "key2", "put", 2)
+          ),
+          AdvanceManualClock(1 * 1000), // batch timestamp: 1000
+          CheckNewAnswer(),
+          AddData(inputStream,
+            MapInputEvent("k1", "key1", "get", -1),
+            MapInputEvent("k1", "key2", "get", -1)
+          ),
+          AdvanceManualClock(30 * 1000), // batch timestamp: 31000
+          CheckNewAnswer(
+            MapOutputEvent("k1", "key1", 1, isTTLValue = false, -1),
+            MapOutputEvent("k1", "key2", 2, isTTLValue = false, -1)
+          ),
+          // get values from ttl state
+          AddData(inputStream,
+            MapInputEvent("k1", "", "get_values_in_ttl_state", -1)
+          ),
+          AdvanceManualClock(1 * 1000), // batch timestamp: 32000
+          CheckNewAnswer(
+            MapOutputEvent("k1", "key1", -1, isTTLValue = true, 61000),
+            MapOutputEvent("k1", "key2", -1, isTTLValue = true, 61000)
+          ),
+          StopStream
+        )
+
+        val stateReaderDf = spark.read
+          .format("statestore")
+          .option(StateSourceOptions.PATH, tempDir.getAbsolutePath)
+          .option(StateSourceOptions.STATE_VAR_NAME, "mapState")
+          .load()
+        println("result df here: " + stateReaderDf.show())
+
+        val resultDf = stateReaderDf.selectExpr(
+          "key.value AS groupingKey", "userKey.value AS userKey",
+          "value.value AS value", "partition_id")
+      }
     }
   }
 }
