@@ -145,4 +145,16 @@ object StateSchemaUtils {
     row.update(4, partition)
     row
   }
+
+  def getExpectedSchemaFields(stateVariableInfo: TransformWithStateVariableInfo): Seq[String] = {
+    stateVariableInfo.stateVariableType match {
+      case StateVariableType.ValueState =>
+        Seq("key", "value", "partition_id")
+      case StateVariableType.MapState =>
+        Seq("key", "userKey", "value", "partition_id")
+      case _ =>
+        throw StateDataSourceErrors.internalError(s"Unsupported state variable type " +
+          s"$stateVariableInfo.stateVariableType")
+    }
+  }
 }

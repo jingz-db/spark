@@ -23,13 +23,14 @@ import scala.jdk.CollectionConverters._
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.connector.catalog.{MetadataColumn, SupportsMetadataColumns, SupportsRead, Table, TableCapability}
 import org.apache.spark.sql.connector.read.ScanBuilder
+import org.apache.spark.sql.execution.datasources.v2.state.StateSchemaUtils.getExpectedSchemaFields
 import org.apache.spark.sql.execution.datasources.v2.state.StateSourceOptions.JoinSideValues
-// import org.apache.spark.sql.execution.datasources.v2.state.utils.SchemaUtil
+import org.apache.spark.sql.execution.datasources.v2.state.utils.SchemaUtil
 import org.apache.spark.sql.execution.streaming.TransformWithStateVariableInfo
 import org.apache.spark.sql.execution.streaming.state.{KeyStateEncoderSpec, StateStoreConf}
 import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructType}
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-// import org.apache.spark.util.ArrayImplicits._
+import org.apache.spark.util.ArrayImplicits._
 
 /** An implementation of [[Table]] with [[SupportsRead]] for State Store data source. */
 class StateTable(
@@ -84,33 +85,34 @@ class StateTable(
   override def properties(): util.Map[String, String] = Map.empty[String, String].asJava
 
   private def isValidSchema(schema: StructType): Boolean = {
-    val expectedFieldNames =
-      if (sourceOptions.readChangeFeed) {
-        Seq("batch_id", "change_type", "key", "value", "partition_id")
+    val expectedFieldNames = {
+      if (stateVariableInfoOpt.isDefined) {
+        getExpectedSchemaFields(stateVariableInfoOpt.get)
       } else {
-        Seq("key", "value", "partition_id")
+        if (sourceOptions.readChangeFeed) {
+          Seq("batch_id", "change_type", "key", "value", "partition_id")
+        } else {
+          Seq("key", "value", "partition_id")
+        }
       }
+    }
+
     val expectedTypes = Map(
       "batch_id" -> classOf[LongType],
       "change_type" -> classOf[StringType],
       "key" -> classOf[StructType],
+      "userKey" -> classOf[StructType],
       "value" -> classOf[StructType],
       "partition_id" -> classOf[IntegerType])
 
-    // TODO improve this
-    /*
-    if (!expectedFieldNames.forall(schema.fieldNames.toImmutableArraySeq.contains)) {
-      println("I am here in false")
-      println("schema fieldNames: " + schema.fieldNames.toImmutableArraySeq)
+    if (schema.fieldNames.toImmutableArraySeq != expectedFieldNames) {
       false
     } else {
-      println("I am here in true")
       schema.fieldNames.forall { fieldName =>
         expectedTypes(fieldName).isAssignableFrom(
           SchemaUtil.getSchemaAsDataType(schema, fieldName).getClass)
       }
-    } */
-    true
+    }
   }
 
   override def metadataColumns(): Array[MetadataColumn] = Array.empty

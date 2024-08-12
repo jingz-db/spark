@@ -18,7 +18,7 @@
 package org.apache.spark.sql.streaming
 
 import org.apache.spark.SparkIllegalArgumentException
-import org.apache.spark.sql.Encoders
+import org.apache.spark.sql.{Encoders, Row}
 import org.apache.spark.sql.execution.datasources.v2.state.StateSourceOptions
 import org.apache.spark.sql.execution.streaming.MemoryStream
 import org.apache.spark.sql.execution.streaming.state.{AlsoTestWithChangelogCheckpointingEnabled, RocksDBStateStoreProvider}
@@ -112,7 +112,7 @@ class TransformWithMapStateSuite extends StreamTest
       )
     }
   }
-/*
+
   test("Test retrieving value with non-existing user key") {
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
       classOf[RocksDBStateStoreProvider].getName) {
@@ -230,11 +230,13 @@ class TransformWithMapStateSuite extends StreamTest
 
     val df = result.toDF()
     checkAnswer(df, Seq(("k1", "v1", "10")).toDF())
-  } */
+  }
 
   test("mapstate with state reader") {
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
-      classOf[RocksDBStateStoreProvider].getName) {
+      classOf[RocksDBStateStoreProvider].getName,
+      SQLConf.SHUFFLE_PARTITIONS.key ->
+        TransformWithStateSuiteUtils.NUM_SHUFFLE_PARTITIONS.toString) {
       withTempDir { tempDir =>
         val inputData = MemoryStream[InputMapRow]
         val result = inputData.toDS()
@@ -249,7 +251,6 @@ class TransformWithMapStateSuite extends StreamTest
           AddData(inputData, InputMapRow("k2", "exists", ("", ""))),
           CheckNewAnswer(("k1", "exists", "true"), ("k2", "exists", "false")),
 
-          // Test get and put with composite key
           AddData(inputData, InputMapRow("k1", "updateValue", ("v2", "5"))),
           AddData(inputData, InputMapRow("k2", "updateValue", ("v2", "3"))),
           ProcessAllAvailable(),
@@ -262,17 +263,13 @@ class TransformWithMapStateSuite extends StreamTest
           .option(StateSourceOptions.STATE_VAR_NAME, "sessionState")
           .load()
 
-        /*
         val resultDf = stateReaderDf.selectExpr(
-          "key.value AS groupingKey",
-          "value.id AS valueId", "value.name AS valueName",
-          "partition_id")
-
+          "key.value AS groupingKey", "userKey.value AS userKey",
+          "value.value AS value", "partition_id")
 
         checkAnswer(resultDf,
-          Seq(Row("a", 1L, "dummyKey", 0), Row("b", 1L, "dummyKey", 1))
-        ) */
-        println("result df: " + stateReaderDf.show(false))
+          Seq(Row("k1", "v1", "10", 4), Row("k1", "v2", "5", 4), Row("k2", "v2", "3", 2))
+        )
       }
     }
   }
