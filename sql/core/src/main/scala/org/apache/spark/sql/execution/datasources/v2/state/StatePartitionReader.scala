@@ -188,13 +188,13 @@ class StatePartitionReader(
       println("groupingKeySchema: " + groupingKeySchema)
       if (!pairs.isEmpty) {
         val previousGroupingKey = pairs.head.key.get(0, groupingKeySchema)
+        val previousGroupingKeyContent = pairs.head.key.getString(0)
         println("previousGrouping key content: " + pairs.head.key.getString(0))
         var curMap = Map.empty[Any, Any]
         // this filter is sus
 
         val firstIter =
-          pairs.filter(p => p.key.get(0,
-            groupingKeySchema) == previousGroupingKey)
+          pairs.filter(p => p.key.getString(0) == previousGroupingKeyContent)
         firstIter.foreach { p =>
           curMap = curMap + (p.key.get(1,
             userKeySchema.get) -> p.value)
