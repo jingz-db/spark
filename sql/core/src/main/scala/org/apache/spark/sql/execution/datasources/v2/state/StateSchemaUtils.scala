@@ -21,7 +21,7 @@ import org.apache.spark.sql.catalyst.expressions.{GenericInternalRow, UnsafeRow}
 import org.apache.spark.sql.execution.datasources.v2.state.utils.SchemaUtil
 import org.apache.spark.sql.execution.streaming.{StateVariableType, TransformWithStateVariableInfo}
 import org.apache.spark.sql.execution.streaming.state.StateStoreColFamilySchema
-import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructType}
+import org.apache.spark.sql.types.{IntegerType, LongType, MapType, StringType, StructType}
 
 /**
  * Utility functions to generate and process schema for state store data source.
@@ -53,18 +53,23 @@ object StateSchemaUtils {
         val groupingKeySchema = SchemaUtil.getSchemaAsDataType(
           stateStoreColFamilySchema.keySchema, "key")
         val userKeySchema = stateStoreColFamilySchema.userKeyEncoderSchema.get
+        val valueMapSchema = new MapType(
+          keyType = userKeySchema,
+          valueType = stateStoreColFamilySchema.valueSchema,
+          valueContainsNull = false // TODO null?
+        )
+        println("inside generate schema for map state, key schema: " + groupingKeySchema)
+        println("inside generate schema for map state, value map schema: " + valueMapSchema)
         if (hasTTLEnabled) {
           new StructType()
             .add("key", groupingKeySchema)
-            .add("userKey", userKeySchema)
-            .add("value", stateStoreColFamilySchema.valueSchema)
+            .add("value", valueMapSchema)
             .add("expiration_timestamp", LongType)
             .add("partition_id", IntegerType)
         } else {
           new StructType()
             .add("key", groupingKeySchema)
-            .add("userKey", userKeySchema)
-            .add("value", stateStoreColFamilySchema.valueSchema)
+            .add("value", valueMapSchema)
             .add("partition_id", IntegerType)
         }
 
@@ -144,17 +149,5 @@ object StateSchemaUtils {
     row.update(3, pair._2.get(1, LongType))
     row.update(4, partition)
     row
-  }
-
-  def getExpectedSchemaFields(stateVariableInfo: TransformWithStateVariableInfo): Seq[String] = {
-    stateVariableInfo.stateVariableType match {
-      case StateVariableType.ValueState =>
-        Seq("key", "value", "partition_id")
-      case StateVariableType.MapState =>
-        Seq("key", "userKey", "value", "partition_id")
-      case _ =>
-        throw StateDataSourceErrors.internalError(s"Unsupported state variable type " +
-          s"$stateVariableInfo.stateVariableType")
-    }
   }
 }
