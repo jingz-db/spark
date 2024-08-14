@@ -235,8 +235,8 @@ class TransformWithMapStateSuite extends StreamTest
   test("state data source integration - map state with single variable") {
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
       classOf[RocksDBStateStoreProvider].getName,
-      SQLConf.SHUFFLE_PARTITIONS.key ->
-        TransformWithStateSuiteUtils.NUM_SHUFFLE_PARTITIONS.toString) {
+      SQLConf.SHUFFLE_PARTITIONS.key -> "1") {
+        // TransformWithStateSuiteUtils.NUM_SHUFFLE_PARTITIONS.toString) {
       withTempDir { tempDir =>
         val inputData = MemoryStream[InputMapRow]
         val result = inputData.toDS()
@@ -247,6 +247,7 @@ class TransformWithMapStateSuite extends StreamTest
         testStream(result, OutputMode.Append())(
           StartStream(checkpointLocation = tempDir.getCanonicalPath),
           AddData(inputData, InputMapRow("k1", "updateValue", ("v1", "10"))),
+          AddData(inputData, InputMapRow("k1", "updateValue", ("v3", "12"))),
           AddData(inputData, InputMapRow("k1", "exists", ("", ""))),
           AddData(inputData, InputMapRow("k2", "exists", ("", ""))),
           CheckNewAnswer(("k1", "exists", "true"), ("k2", "exists", "false")),

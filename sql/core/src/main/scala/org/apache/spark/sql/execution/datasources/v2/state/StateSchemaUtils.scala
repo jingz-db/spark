@@ -16,11 +16,15 @@
  */
 package org.apache.spark.sql.execution.datasources.v2.state
 
+import scala.collection.mutable
+
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{GenericInternalRow, UnsafeRow}
+import org.apache.spark.sql.catalyst.util.{ArrayBasedMapData, ArrayData}
 import org.apache.spark.sql.execution.datasources.v2.state.utils.SchemaUtil
-import org.apache.spark.sql.execution.streaming.{StateVariableType, TransformWithStateVariableInfo}
-import org.apache.spark.sql.execution.streaming.state.StateStoreColFamilySchema
+import org.apache.spark.sql.execution.streaming.StateVariableType._
+import org.apache.spark.sql.execution.streaming.TransformWithStateVariableInfo
+import org.apache.spark.sql.execution.streaming.state.{StateStoreColFamilySchema, UnsafeRowPair}
 import org.apache.spark.sql.types.{IntegerType, LongType, MapType, StringType, StructType}
 
 /**
@@ -35,7 +39,7 @@ object StateSchemaUtils {
     val hasTTLEnabled = stateVarInfo.ttlEnabled
 
     stateVarType match {
-      case StateVariableType.ValueState =>
+      case ValueState =>
         if (hasTTLEnabled) {
           new StructType()
             .add("key", stateStoreColFamilySchema.keySchema)
@@ -49,14 +53,14 @@ object StateSchemaUtils {
             .add("partition_id", IntegerType)
         }
 
-      case StateVariableType.MapState =>
+      case MapState =>
         val groupingKeySchema = SchemaUtil.getSchemaAsDataType(
           stateStoreColFamilySchema.keySchema, "key")
         val userKeySchema = stateStoreColFamilySchema.userKeyEncoderSchema.get
         val valueMapSchema = new MapType(
           keyType = userKeySchema,
           valueType = stateStoreColFamilySchema.valueSchema,
-          valueContainsNull = false // TODO null?
+          valueContainsNull = false
         )
         println("inside generate schema for map state, key schema: " + groupingKeySchema)
         println("inside generate schema for map state, value map schema: " + valueMapSchema)
@@ -123,17 +127,142 @@ object StateSchemaUtils {
     row
   }
 
+  def getUserKeySchema(
+      stateVariableInfoOpt: Option[TransformWithStateVariableInfo],
+      schema: StructType): Option[StructType] = {
+    if (!stateVariableInfoOpt.isDefined ||
+    stateVariableInfoOpt.get.stateVariableType != MapState) {
+      None
+    } else {
+      try {
+        Option(
+          SchemaUtil.getSchemaAsDataType(schema, "value").asInstanceOf[MapType]
+            .keyType.asInstanceOf[StructType])
+      } catch {
+        case _: Exception =>
+          None
+      }
+    }
+  }
+
+  def getGroupingKeySchema(
+      stateVariableInfoOpt: Option[TransformWithStateVariableInfo],
+      schema: StructType): StructType = {
+    stateVariableInfoOpt.get.stateVariableType match {
+      case ValueState =>
+        SchemaUtil.getSchemaAsDataType(
+          schema, "key").asInstanceOf[StructType]
+      case MapState =>
+        val groupingKeySchema = SchemaUtil.getSchemaAsDataType(
+          schema, "key").asInstanceOf[StructType]
+        val userKeySchema = getUserKeySchema(stateVariableInfoOpt, schema)
+        new StructType()
+          .add("key", groupingKeySchema)
+          .add("userKey", userKeySchema.get)
+      case _ =>
+        throw StateDataSourceErrors.internalError(
+          s"Unsupported state variable type ${stateVariableInfoOpt.get.stateVariableType}")
+    }
+  }
+
+  def getValueSchema(
+      stateVariableInfoOpt: Option[TransformWithStateVariableInfo],
+      schema: StructType): StructType = {
+    stateVariableInfoOpt.get.stateVariableType match {
+      case ValueState =>
+        SchemaUtil.getSchemaAsDataType(
+          schema, "value").asInstanceOf[StructType]
+      case MapState =>
+        SchemaUtil.getSchemaAsDataType(
+          schema, "value").asInstanceOf[MapType]
+          .valueType.asInstanceOf[StructType]
+      case _ =>
+        throw StateDataSourceErrors.internalError(
+          s"Unsupported state variable type ${stateVariableInfoOpt.get.stateVariableType}")
+    }
+  }
+
   def unifyMapStateRowPair(
-      pair: (UnsafeRow, UnsafeRow),
-      groupingKeySchema: StructType,
-      userKeySchema: StructType,
-      partition: Int): InternalRow = {
-    val row = new GenericInternalRow(4)
-    row.update(0, pair._1.get(0, groupingKeySchema))
-    row.update(1, pair._1.get(1, userKeySchema))
-    row.update(2, pair._2)
-    row.update(3, partition)
-    row
+      stateRows: Iterator[UnsafeRowPair],
+      compositeKeySchema: StructType,
+      valueSchema: StructType,
+      partitionId: Int): Iterator[InternalRow] = {
+    val groupingKeySchema = SchemaUtil.getSchemaAsDataType(
+      compositeKeySchema, "key"
+    ).asInstanceOf[StructType]
+    val userKeySchema = SchemaUtil.getSchemaAsDataType(
+      compositeKeySchema, "userKey"
+    ).asInstanceOf[StructType]
+
+    def appendKVPairToMap(
+        curMap: mutable.Map[Any, Any],
+        stateRowPair: UnsafeRowPair): Unit = {
+      curMap += (
+        stateRowPair.key.get(1, userKeySchema) ->
+          stateRowPair.value
+        )
+    }
+
+    def updateDataRow(
+        groupingKey: Any,
+        curMap: mutable.Map[Any, Any]): GenericInternalRow = {
+      val row = new GenericInternalRow(3)
+      val mapData = new ArrayBasedMapData(
+        ArrayData.toArrayData(curMap.keys.toArray),
+        ArrayData.toArrayData(curMap.values.toArray)
+      )
+      row.update(0, groupingKey)
+      row.update(1, mapData)
+      row.update(2, partitionId)
+      row
+    }
+
+    // state rows are sorted in rocksDB. So all of the rows with same
+    // user key should be grouped together consecutively
+    new Iterator[InternalRow] {
+      var curGroupingKey: Any = _
+      var curStateRowPair: UnsafeRowPair = _
+      val curMap = mutable.Map.empty[Any, Any]
+
+      override def hasNext: Boolean = stateRows.hasNext
+
+      override def next(): InternalRow = {
+        var keepGoing = true
+        while (stateRows.hasNext && keepGoing) {
+          curStateRowPair = stateRows.next()
+          if (curGroupingKey == null) {
+            // first time in the iterator
+            curGroupingKey = curStateRowPair.key.get(0, groupingKeySchema)
+            appendKVPairToMap(curMap, curStateRowPair)
+          } else {
+            val curPairGKey = curStateRowPair.key.get(0, groupingKeySchema)
+            if (curPairGKey == curGroupingKey) {
+              appendKVPairToMap(curMap, curStateRowPair)
+            } else {
+              // find a different grouping key, exit loop and return a row
+              keepGoing = false
+            }
+          }
+        }
+        if (!keepGoing) {
+          // found a different grouping key
+          val row = updateDataRow(curGroupingKey, curMap)
+          // update vars
+          curGroupingKey = curStateRowPair.key.get(0, groupingKeySchema)
+          // empty the map, append current row
+          curMap.clear()
+          appendKVPairToMap(curMap, curStateRowPair)
+          // return map value of previous grouping key
+          row
+        } else {
+          // reach the end of the state rows
+          if (curMap.isEmpty) null.asInstanceOf[InternalRow]
+          else {
+            updateDataRow(curGroupingKey, curMap)
+          }
+        }
+      }
+    }
   }
 
   def unifyMapStateRowPairWithTTL(

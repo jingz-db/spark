@@ -39,8 +39,6 @@ class MapStateImpl[K, V](
   private val stateTypesEncoder = new CompositeKeyStateEncoder(
     keyExprEnc, userKeyEnc, valEncoder, stateName)
 
-  println("I am inside mapstateimpl, key schema: " + schemaForCompositeKeyRow)
-  println("I am inside mapstateimpl, value schema: " + schemaForValueRow)
   store.createColFamilyIfAbsent(stateName, schemaForCompositeKeyRow, schemaForValueRow,
     PrefixKeyScanStateEncoderSpec(schemaForCompositeKeyRow, 1))
 
