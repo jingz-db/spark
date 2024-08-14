@@ -1063,7 +1063,7 @@ class RocksDBStateStoreSuite extends StateStoreSuiteBase[RocksDBStateStoreProvid
       put(store, ("a", 1), 1, colFamily2)
       assert(valueRowToData(get(store, "a", 1, colFamily2)) === 1)
 
-      store.commit() // 1
+      store.commit()
 
       // reload version 0
       store = provider.getStore(0)

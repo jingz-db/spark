@@ -157,7 +157,6 @@ class StatePartitionReader(
       .map(_.stateName).getOrElse(StateStore.DEFAULT_COL_FAMILY_NAME)
     if (stateVariableInfoOpt.isDefined &&
       stateVariableInfoOpt.get.stateVariableType == StateVariableType.MapState) {
-      val hasTTLEnabled = stateVariableInfoOpt.get.ttlEnabled
       StateSchemaUtils.unifyMapStateRowPair(
         store.iterator(stateVarName), keySchema, partition.partition)
     } else {
