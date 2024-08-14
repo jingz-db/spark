@@ -18,7 +18,7 @@
 package org.apache.spark.sql.streaming
 
 import org.apache.spark.SparkIllegalArgumentException
-import org.apache.spark.sql.Encoders
+import org.apache.spark.sql.{Encoders, Row}
 import org.apache.spark.sql.execution.datasources.v2.state.StateSourceOptions
 import org.apache.spark.sql.execution.streaming.MemoryStream
 import org.apache.spark.sql.execution.streaming.state.{AlsoTestWithChangelogCheckpointingEnabled, RocksDBStateStoreProvider}
@@ -236,7 +236,6 @@ class TransformWithMapStateSuite extends StreamTest
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
       classOf[RocksDBStateStoreProvider].getName,
       SQLConf.SHUFFLE_PARTITIONS.key -> "1") {
-        // TransformWithStateSuiteUtils.NUM_SHUFFLE_PARTITIONS.toString) {
       withTempDir { tempDir =>
         val inputData = MemoryStream[InputMapRow]
         val result = inputData.toDS()
@@ -247,7 +246,6 @@ class TransformWithMapStateSuite extends StreamTest
         testStream(result, OutputMode.Append())(
           StartStream(checkpointLocation = tempDir.getCanonicalPath),
           AddData(inputData, InputMapRow("k1", "updateValue", ("v1", "10"))),
-          AddData(inputData, InputMapRow("k1", "updateValue", ("v3", "12"))),
           AddData(inputData, InputMapRow("k1", "exists", ("", ""))),
           AddData(inputData, InputMapRow("k2", "exists", ("", ""))),
           CheckNewAnswer(("k1", "exists", "true"), ("k2", "exists", "false")),
@@ -266,14 +264,16 @@ class TransformWithMapStateSuite extends StreamTest
 
         println("result df here: " + stateReaderDf.show(false))
 
-        /*
         val resultDf = stateReaderDf.selectExpr(
-          "key.value AS groupingKey", "userKey.value AS userKey",
-          "value.value AS value", "partition_id")
+          "key.value AS groupingKey", "value", "partition_id")
 
         checkAnswer(resultDf,
-          Seq(Row("k1", "v1", "10", 4), Row("k1", "v2", "5", 4), Row("k2", "v2", "3", 2))
-        ) */
+          Seq(
+            Row("k1",
+              Map(Row("v1") -> Row("10"), Row("v2") -> Row("5")), 0),
+            Row("k2",
+              Map(Row("v2") -> Row("3")), 0))
+        )
       }
     }
   }

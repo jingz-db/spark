@@ -62,20 +62,11 @@ object StateSchemaUtils {
           valueType = stateStoreColFamilySchema.valueSchema,
           valueContainsNull = false
         )
-        println("inside generate schema for map state, key schema: " + groupingKeySchema)
-        println("inside generate schema for map state, value map schema: " + valueMapSchema)
-        if (hasTTLEnabled) {
-          new StructType()
-            .add("key", groupingKeySchema)
-            .add("value", valueMapSchema)
-            .add("expiration_timestamp", LongType)
-            .add("partition_id", IntegerType)
-        } else {
-          new StructType()
-            .add("key", groupingKeySchema)
-            .add("value", valueMapSchema)
-            .add("partition_id", IntegerType)
-        }
+
+        new StructType()
+          .add("key", groupingKeySchema)
+          .add("value", valueMapSchema)
+          .add("partition_id", IntegerType)
 
       case _ =>
         throw StateDataSourceErrors.internalError(s"Unsupported state variable type $stateVarType")
@@ -127,7 +118,7 @@ object StateSchemaUtils {
     row
   }
 
-  def getUserKeySchema(
+  private def getUserKeySchema(
       stateVariableInfoOpt: Option[TransformWithStateVariableInfo],
       schema: StructType): Option[StructType] = {
     if (!stateVariableInfoOpt.isDefined ||
@@ -185,7 +176,6 @@ object StateSchemaUtils {
   def unifyMapStateRowPair(
       stateRows: Iterator[UnsafeRowPair],
       compositeKeySchema: StructType,
-      valueSchema: StructType,
       partitionId: Int): Iterator[InternalRow] = {
     val groupingKeySchema = SchemaUtil.getSchemaAsDataType(
       compositeKeySchema, "key"
@@ -198,8 +188,9 @@ object StateSchemaUtils {
         curMap: mutable.Map[Any, Any],
         stateRowPair: UnsafeRowPair): Unit = {
       curMap += (
-        stateRowPair.key.get(1, userKeySchema) ->
-          stateRowPair.value
+        stateRowPair.key.get(1, userKeySchema)
+          .asInstanceOf[UnsafeRow].copy() ->
+          stateRowPair.value.copy()
         )
     }
 
@@ -220,23 +211,28 @@ object StateSchemaUtils {
     // state rows are sorted in rocksDB. So all of the rows with same
     // user key should be grouped together consecutively
     new Iterator[InternalRow] {
-      var curGroupingKey: Any = _
+      var curGroupingKey: UnsafeRow = _
       var curStateRowPair: UnsafeRowPair = _
       val curMap = mutable.Map.empty[Any, Any]
 
-      override def hasNext: Boolean = stateRows.hasNext
+      override def hasNext: Boolean =
+        stateRows.hasNext || !curMap.isEmpty
 
       override def next(): InternalRow = {
         var keepGoing = true
         while (stateRows.hasNext && keepGoing) {
           curStateRowPair = stateRows.next()
           if (curGroupingKey == null) {
-            // first time in the iterator
-            curGroupingKey = curStateRowPair.key.get(0, groupingKeySchema)
+            // First time in the iterator
+            // Need to make a copy because we need to keep the
+            // value across function calls
+            curGroupingKey = curStateRowPair.key
+              .get(0, groupingKeySchema).asInstanceOf[UnsafeRow].copy()
             appendKVPairToMap(curMap, curStateRowPair)
           } else {
-            val curPairGKey = curStateRowPair.key.get(0, groupingKeySchema)
-            if (curPairGKey == curGroupingKey) {
+            val curPairGroupingKey =
+              curStateRowPair.key.get(0, groupingKeySchema)
+            if (curPairGroupingKey == curGroupingKey) {
               appendKVPairToMap(curMap, curStateRowPair)
             } else {
               // find a different grouping key, exit loop and return a row
@@ -248,7 +244,9 @@ object StateSchemaUtils {
           // found a different grouping key
           val row = updateDataRow(curGroupingKey, curMap)
           // update vars
-          curGroupingKey = curStateRowPair.key.get(0, groupingKeySchema)
+          curGroupingKey =
+            curStateRowPair.key.get(0, groupingKeySchema)
+              .asInstanceOf[UnsafeRow].copy()
           // empty the map, append current row
           curMap.clear()
           appendKVPairToMap(curMap, curStateRowPair)
@@ -258,25 +256,13 @@ object StateSchemaUtils {
           // reach the end of the state rows
           if (curMap.isEmpty) null.asInstanceOf[InternalRow]
           else {
-            updateDataRow(curGroupingKey, curMap)
+            val row = updateDataRow(curGroupingKey, curMap)
+            // clear the map to end the iterator
+            curMap.clear()
+            row
           }
         }
       }
     }
-  }
-
-  def unifyMapStateRowPairWithTTL(
-      pair: (UnsafeRow, UnsafeRow),
-      groupingKeySchema: StructType,
-      userKeySchema: StructType,
-      valueSchema: StructType,
-      partition: Int): InternalRow = {
-    val row = new GenericInternalRow(5)
-    row.update(0, pair._1.get(0, groupingKeySchema))
-    row.update(1, pair._1.get(1, userKeySchema))
-    row.update(2, pair._2.get(0, valueSchema))
-    row.update(3, pair._2.get(1, LongType))
-    row.update(4, partition)
-    row
   }
 }
