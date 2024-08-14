@@ -24,9 +24,11 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.connector.catalog.{MetadataColumn, SupportsMetadataColumns, SupportsRead, Table, TableCapability}
 import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.execution.datasources.v2.state.StateSourceOptions.JoinSideValues
+import org.apache.spark.sql.execution.datasources.v2.state.utils.SchemaUtil
+import org.apache.spark.sql.execution.streaming.StateVariableType.MapState
 import org.apache.spark.sql.execution.streaming.TransformWithStateVariableInfo
 import org.apache.spark.sql.execution.streaming.state.{KeyStateEncoderSpec, StateStoreConf}
-import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructType}
+import org.apache.spark.sql.types.{IntegerType, LongType, MapType, StringType, StructType}
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.util.ArrayImplicits._
 
@@ -89,23 +91,23 @@ class StateTable(
       } else {
         Seq("key", "value", "partition_id")
       }
-
     val expectedTypes = Map(
       "batch_id" -> classOf[LongType],
       "change_type" -> classOf[StringType],
       "key" -> classOf[StructType],
-      "value" -> classOf[StructType],
+      "value" -> (if (stateVariableInfoOpt.isDefined &&
+        stateVariableInfoOpt.get.stateVariableType == MapState) {
+        classOf[MapType]
+      } else classOf[StructType]),
       "partition_id" -> classOf[IntegerType])
 
     if (schema.fieldNames.toImmutableArraySeq != expectedFieldNames) {
       false
     } else {
-      // TODO fix this
-      /*
       schema.fieldNames.forall { fieldName =>
         expectedTypes(fieldName).isAssignableFrom(
-          SchemaUtil.getSchemaAsDataType(schema, fieldName).getClass) */
-      true
+          SchemaUtil.getSchemaAsDataType(schema, fieldName).getClass)
+      }
     }
   }
 

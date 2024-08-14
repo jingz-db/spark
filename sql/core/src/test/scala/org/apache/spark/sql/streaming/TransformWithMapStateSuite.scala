@@ -112,7 +112,7 @@ class TransformWithMapStateSuite extends StreamTest
       )
     }
   }
-/*
+
   test("Test retrieving value with non-existing user key") {
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
       classOf[RocksDBStateStoreProvider].getName) {
@@ -216,7 +216,7 @@ class TransformWithMapStateSuite extends StreamTest
         }
       )
     }
-  } */
+  }
 
   test("transformWithMapState - batch should succeed") {
     val inputData = Seq(
@@ -261,8 +261,6 @@ class TransformWithMapStateSuite extends StreamTest
           .option(StateSourceOptions.PATH, tempDir.getAbsolutePath)
           .option(StateSourceOptions.STATE_VAR_NAME, "sessionState")
           .load()
-
-        println("result df here: " + stateReaderDf.show(false))
 
         val resultDf = stateReaderDf.selectExpr(
           "key.value AS groupingKey", "value", "partition_id")
