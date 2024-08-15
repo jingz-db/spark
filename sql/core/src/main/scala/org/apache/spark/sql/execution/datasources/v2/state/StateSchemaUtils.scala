@@ -209,7 +209,7 @@ object StateSchemaUtils {
     }
 
     // state rows are sorted in rocksDB. So all of the rows with same
-    // user key should be grouped together consecutively
+    // grouping key should be grouped together consecutively
     new Iterator[InternalRow] {
       var curGroupingKey: UnsafeRow = _
       var curStateRowPair: UnsafeRowPair = _
