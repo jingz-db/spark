@@ -31,7 +31,7 @@ import org.apache.spark.sql.{Encoders, Row}
 import org.apache.spark.sql.api.python.PythonSQLUtils
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.execution.streaming.{ImplicitGroupingKeyTracker, StatefulProcessorHandleImpl, StatefulProcessorHandleState}
-import org.apache.spark.sql.execution.streaming.state.StateMessage.{HandleState, ImplicitGroupingKeyRequest, ListStateCall, StatefulProcessorCall, StateRequest, StateResponse, StateVariableRequest, ValueStateCall}
+import org.apache.spark.sql.execution.streaming.state.StateMessage.{HandleState, ImplicitGroupingKeyRequest, ListStateCall, StatefulProcessorCall, StateRequest, StateResponse, StateVariableRequest, TimerStateCallCommand, ValueStateCall}
 import org.apache.spark.sql.streaming.{ListState, ValueState}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.ArrowUtils
@@ -188,6 +188,25 @@ class TransformWithStateInPandasStateServer(
         val stateName = message.getGetListState.getStateName
         val schema = message.getGetListState.getSchema
         initializeStateVariable(stateName, schema, "listState")
+      case StatefulProcessorCall.MethodCase.TIMERSTATECALL =>
+        val expiryTimestamp = message.getTimerStateCall.getExpiryTimestampMs
+        message.getTimerStateCall.getMethodCase match {
+          case TimerStateCallCommand.MethodCase.REGISTER =>
+            statefulProcessorHandle.registerTimer(expiryTimestamp)
+          case TimerStateCallCommand.MethodCase.DELETE =>
+            statefulProcessorHandle.deleteTimer(expiryTimestamp)
+            /*
+          case TimerStateCallCommand.MethodCase.LISTTIMERS =>
+            // Serialize the timer row as a byte array
+            val valueBytes = PythonSQLUtils.toPyRow(
+              statefulProcessorHandle.listTimers()
+            )
+            val byteString = ByteString.copyFrom(valueBytes)
+            sendResponse(0, null, byteString) */
+          case _ =>
+            // TODO fix this
+            println("some other method case for timerstatecallcommand")
+        }
       case _ =>
         throw new IllegalArgumentException("Invalid method call")
     }

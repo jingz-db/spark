@@ -112,6 +112,7 @@ case class TransformWithStateInPandasExec(
   override protected def doExecute(): RDD[InternalRow] = {
     metrics
 
+    println("I am inside physical op, func: " + functionExpr)
     val (dedupAttributes, argOffsets) = resolveArgOffsets(child.output, groupingAttributes)
 
     child.execute().mapPartitionsWithStateStore[InternalRow](

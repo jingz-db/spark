@@ -40,6 +40,7 @@ message StatefulProcessorCall {
     StateCallCommand getValueState = 2;
     StateCallCommand getListState = 3;
     StateCallCommand getMapState = 4;
+    TimerStateCallCommand timerStateCall = 5;
   }
 }
 
@@ -60,6 +61,15 @@ message ImplicitGroupingKeyRequest {
 message StateCallCommand {
   string stateName = 1;
   string schema = 2;
+}
+
+message TimerStateCallCommand {
+  int64 expiryTimestampMs = 1;
+  oneof method {
+    RegisterTimer register = 2;
+    DeleteTimers delete = 3;
+    ListTimers list = 4;
+  }
 }
 
 message ValueStateCall {
@@ -95,6 +105,15 @@ message Exists {
 }
 
 message Get {
+}
+
+message RegisterTimer {
+}
+
+message DeleteTimers {
+}
+
+message ListTimers {
 }
 
 message ValueStateUpdate {

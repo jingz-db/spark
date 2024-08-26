@@ -130,6 +130,48 @@ class ListState:
         self._list_state_client.clear(self._state_name)
 
 
+class TimerValues:
+    def __init__(
+            self,
+            current_processing_time_opt: Optional[int],
+            current_watermark_opt: Optional[int]) -> None:
+        self._current_processing_time = current_processing_time_opt
+        self._current_watermark = current_watermark_opt
+
+    def get_current_processing_time_in_ms(self) -> int:
+        if self._current_processing_time is not None:
+            return self._current_processing_time
+        else:
+            return -1
+
+    def get_current_watermark_in_ms(self) -> int:
+        if self._current_watermark is not None:
+            return self._current_watermark
+        else:
+            return -1
+
+
+class ExpiredTimerInfo:
+    def __init__(
+            self,
+            is_valid: bool,
+            expiry_time_in_ms_opt: Optional[int] = None,
+            timeout_mode: str = "none"):
+        self._is_valid = is_valid
+        self._expiry_time_in_ms = expiry_time_in_ms_opt
+        self._timeoutMode = timeout_mode
+
+    def is_valid(self) -> bool:
+        self._is_valid
+
+    def get_expiry_time_in_ms(self) -> int:
+        if self._expiry_time_in_ms is not None:
+            return self._expiry_time_in_ms
+        else:
+            return -1
+>>>>>>> ab1670ee9c (compiling)
+
+
 class StatefulProcessorHandle:
     """
     Represents the operation handle provided to the stateful processor used in transformWithState
@@ -158,6 +200,7 @@ class StatefulProcessorHandle:
         self.stateful_processor_api_client.get_value_state(state_name, schema)
         return ValueState(ValueStateClient(self.stateful_processor_api_client), state_name, schema)
 
+<<<<<<< HEAD
     def getListState(self, state_name: str, schema: Union[StructType, str]) -> ListState:
         """
         Function to create new or return existing single value state variable of given type.
@@ -174,6 +217,16 @@ class StatefulProcessorHandle:
         """
         self.stateful_processor_api_client.get_list_state(state_name, schema)
         return ListState(ListStateClient(self.stateful_processor_api_client), state_name, schema)
+=======
+    def registerTimer(self, expiry_time_stamp_ms: int) -> None:
+        self.stateful_processor_api_client.register_timer(expiry_time_stamp_ms)
+
+    def deleteTimers(self, expiry_time_stamp_ms: int) -> None:
+        self.stateful_processor_api_client.delete_timers(expiry_time_stamp_ms)
+
+    def listTimers(self) -> Iterator:
+        ...
+>>>>>>> ab1670ee9c (compiling)
 
 
 class StatefulProcessor(ABC):
@@ -200,7 +253,9 @@ class StatefulProcessor(ABC):
 
     @abstractmethod
     def handleInputRows(
-        self, key: Any, rows: Iterator["PandasDataFrameLike"]
+        self, key: Any, rows: Iterator["PandasDataFrameLike"],
+            timer_values: TimerValues = TimerValues(None, None),
+            expired_timer_info: ExpiredTimerInfo =ExpiredTimerInfo(False)
     ) -> Iterator["PandasDataFrameLike"]:
         """
         Function that will allow users to interact with input data rows along with the grouping key.
@@ -219,6 +274,8 @@ class StatefulProcessor(ABC):
             grouping key.
         rows : iterable of :class:`pandas.DataFrame`
             iterator of input rows associated with grouping key
+        timer_values: TimerValues
+        expired_timer_info: ExpiredTimerInfo
         """
         ...
 

@@ -27,7 +27,7 @@ from pyspark.sql.streaming.stateful_processor_api_client import (
     StatefulProcessorApiClient,
     StatefulProcessorHandleState,
 )
-from pyspark.sql.streaming.stateful_processor import StatefulProcessor, StatefulProcessorHandle
+from pyspark.sql.streaming.stateful_processor import ExpiredTimerInfo, StatefulProcessor, StatefulProcessorHandle, TimerValues
 from pyspark.sql.types import StructType, _parse_datatype_string
 
 if TYPE_CHECKING:
@@ -507,6 +507,8 @@ class PandasGroupedOpsMixin:
                 )
 
             statefulProcessorApiClient.set_implicit_key(key)
+
+            # make state store call first to have rows update reflected in the state store
             result = statefulProcessor.handleInputRows(key, inputRows)
 
             return result

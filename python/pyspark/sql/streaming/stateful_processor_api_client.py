@@ -133,6 +133,30 @@ class StatefulProcessorApiClient:
         state_call_command.schema = schema.json()
         call = stateMessage.StatefulProcessorCall(getListState=state_call_command)
         message = stateMessage.StateRequest(statefulProcessorCall=call)
+    def register_timer(self, expiry_time_stamp_ms: int) -> None:
+        import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
+
+        state_call_command = stateMessage.TimerStateCallCommand()
+        state_call_command.expiryTimestampMs = expiry_time_stamp_ms
+        state_call_command.register = stateMessage.RegisterTimer()
+        call = stateMessage.StatefulProcessorCall(timerStateCall=state_call_command)
+        message = stateMessage.StateRequest(StatefulProcessorCall=call)
+
+        self._send_proto_message(message.SerializeToString())
+        response_message = self._receive_proto_message()
+        status = response_message[0]
+        if status != 0:
+            # TODO(SPARK-49233): Classify user facing errors.
+            raise PySparkRuntimeError(f"Error initializing value state: " f"{response_message[1]}")
+
+    def delete_timers(self, expiry_time_stamp_ms: int) -> None:
+        import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
+
+        state_call_command = stateMessage.TimerStateCallCommand()
+        state_call_command.expiryTimestampMs = expiry_time_stamp_ms
+        state_call_command.delete = stateMessage.DeleteTimers()
+        call = stateMessage.StatefulProcessorCall(timerStateCall=state_call_command)
+        message = stateMessage.StateRequest(StatefulProcessorCall=call)
 
         self._send_proto_message(message.SerializeToString())
         response_message = self._receive_proto_message()
