@@ -25,6 +25,7 @@ message StateRequest {
     StatefulProcessorCall statefulProcessorCall = 2;
     StateVariableRequest stateVariableRequest = 3;
     ImplicitGroupingKeyRequest implicitGroupingKeyRequest = 4;
+    TimerMiscRequest timerMiscRequest = 5;
   }
 }
 
@@ -56,6 +57,15 @@ message ImplicitGroupingKeyRequest {
     SetImplicitKey setImplicitKey = 1;
     RemoveImplicitKey removeImplicitKey = 2;
   }
+}
+
+message TimerMiscRequest {
+  oneof method {
+    GetBatchTimestampMs getBatchTimestampMs = 1;
+  }
+}
+
+message GetBatchTimestampMs {
 }
 
 message StateCallCommand {

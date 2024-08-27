@@ -133,6 +133,32 @@ class StatefulProcessorApiClient:
         state_call_command.schema = schema.json()
         call = stateMessage.StatefulProcessorCall(getListState=state_call_command)
         message = stateMessage.StateRequest(statefulProcessorCall=call)
+
+        self._send_proto_message(message.SerializeToString())
+        response_message = self._receive_proto_message()
+        status = response_message[0]
+        if status != 0:
+            # TODO(SPARK-49233): Classify user facing errors.
+            raise PySparkRuntimeError(f"Error initializing value state: " f"{response_message[1]}")
+    def get_batch_timestamp(self) -> int:
+        import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
+        get_batch_timestamp = stateMessage.GetBatchTimestampMs()
+        request = stateMessage.TimerMiscRequest(getBatchTimestampMs=get_batch_timestamp)
+        message = stateMessage.StateRequest(timerMiscRequest=request)
+
+        self._send_proto_message(message.SerializeToString())
+        response_message = self._receive_proto_message()
+        status = response_message[0]
+        if status != 0:
+            # TODO(SPARK-49233): Classify user facing errors.
+            raise PySparkRuntimeError(f"Error initializing timer state: " f"{response_message[1]}")
+        else:
+            if len(response_message[2]) == 0:
+                return -1
+            # TODO: can we simply parse from utf8 string here?
+            timestamp = int(response_message[2])
+            return timestamp
+
     def register_timer(self, expiry_time_stamp_ms: int) -> None:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
 

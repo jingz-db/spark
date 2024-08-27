@@ -508,7 +508,6 @@ class PandasGroupedOpsMixin:
 
             statefulProcessorApiClient.set_implicit_key(key)
 
-            # make state store call first to have rows update reflected in the state store
             result = statefulProcessor.handleInputRows(key, inputRows)
 
             return result

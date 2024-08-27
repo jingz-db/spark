@@ -255,7 +255,7 @@ class StatefulProcessor(ABC):
     def handleInputRows(
         self, key: Any, rows: Iterator["PandasDataFrameLike"],
             timer_values: TimerValues = TimerValues(None, None),
-            expired_timer_info: ExpiredTimerInfo =ExpiredTimerInfo(False)
+            expired_timer_info: ExpiredTimerInfo = ExpiredTimerInfo(False)
     ) -> Iterator["PandasDataFrameLike"]:
         """
         Function that will allow users to interact with input data rows along with the grouping key.

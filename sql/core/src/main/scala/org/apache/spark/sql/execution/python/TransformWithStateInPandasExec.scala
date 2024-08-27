@@ -26,12 +26,13 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.catalyst.expressions.{Ascending, Attribute, Expression, PythonUDF, SortOrder}
+import org.apache.spark.sql.catalyst.plans.logical.{EventTime, ProcessingTime}
 import org.apache.spark.sql.catalyst.plans.physical.Distribution
 import org.apache.spark.sql.catalyst.types.DataTypeUtils
 import org.apache.spark.sql.execution.{SparkPlan, UnaryExecNode}
 import org.apache.spark.sql.execution.metric.SQLMetric
 import org.apache.spark.sql.execution.python.PandasGroupUtils.{executePython, groupAndProject, resolveArgOffsets}
-import org.apache.spark.sql.execution.streaming.{StatefulOperatorPartitioning, StatefulOperatorStateInfo, StatefulProcessorHandleImpl, StateStoreWriter, WatermarkSupport}
+import org.apache.spark.sql.execution.streaming.{StatefulOperatorPartitioning, StatefulOperatorStateInfo, StatefulProcessorHandleImpl, StatefulProcessorHandleState, StateStoreWriter, WatermarkSupport}
 import org.apache.spark.sql.execution.streaming.state.{NoPrefixKeyStateEncoderSpec, StateSchemaValidationResult, StateStore, StateStoreOps}
 import org.apache.spark.sql.streaming.{OutputMode, TimeMode}
 import org.apache.spark.sql.types.{BinaryType, StructField, StructType}
@@ -112,7 +113,6 @@ case class TransformWithStateInPandasExec(
   override protected def doExecute(): RDD[InternalRow] = {
     metrics
 
-    println("I am inside physical op, func: " + functionExpr)
     val (dedupAttributes, argOffsets) = resolveArgOffsets(child.output, groupingAttributes)
 
     child.execute().mapPartitionsWithStateStore[InternalRow](
@@ -146,9 +146,42 @@ case class TransformWithStateInPandasExec(
           pythonMetrics,
           jobArtifactUUID,
           groupingKeySchema
+          // use empty timestamp for the first time to process state rows
         )
 
-        val outputIterator = executePython(data, output, runner)
+        val dataOutputIterator = executePython(data, output, runner)
+        val newDataProcessorIter =
+          CompletionIterator[InternalRow, Iterator[InternalRow]](
+            dataOutputIterator, {
+              // Once the input is processed, mark the start time for timeout processing to measure
+              // it separately from the overall processing time.
+              // TODO fix this
+              // timeoutProcessingStartTimeNs = System.nanoTime
+              processorHandle.setHandleState(StatefulProcessorHandleState.DATA_PROCESSED)
+            })
+
+        val timerOutputIterator = processTimers(processorHandle, dedupAttributes, argOffsets)
+
+        val timeoutProcessorIter = new Iterator[InternalRow] {
+          private lazy val itr = getIterator()
+
+          override def hasNext = itr.hasNext
+
+          override def next() = itr.next()
+
+          private def getIterator(): Iterator[InternalRow] =
+            CompletionIterator[InternalRow, Iterator[InternalRow]](
+              timerOutputIterator, {
+                // Note: `timeoutLatencyMs` also includes the time the parent operator took for
+                // processing output returned through iterator.
+                // TODO fix this
+                // timeoutLatencyMs += NANOSECONDS.toMillis(System.nanoTime -
+                // timeoutProcessingStartTimeNs)
+                processorHandle.setHandleState(StatefulProcessorHandleState.TIMER_PROCESSED)
+              })
+        }
+
+        val outputIterator = newDataProcessorIter ++ timeoutProcessorIter
 
         CompletionIterator[InternalRow, Iterator[InternalRow]](outputIterator, {
           // Note: Due to the iterator lazy execution, this metric also captures the time taken
@@ -164,6 +197,49 @@ case class TransformWithStateInPandasExec(
           row
         }
     }
+  }
+
+  private def processTimers(
+      processorHandle: StatefulProcessorHandleImpl,
+      dedupAttributes: Seq[Attribute],
+      argOffsets: Array[Int]): Iterator[InternalRow] = {
+    timeMode match {
+      case ProcessingTime =>
+        assert(batchTimestampMs.isDefined)
+        val batchTimestamp = batchTimestampMs.get
+        processTimerRows(processorHandle, dedupAttributes, argOffsets)
+      case EventTime =>
+        assert(eventTimeWatermarkForEviction.isDefined)
+        val watermark = eventTimeWatermarkForEviction.get
+        processTimerRows(processorHandle, dedupAttributes, argOffsets)
+      case _ => Iterator.empty
+    }
+  }
+
+  private def processTimerRows(
+      processorHandle: StatefulProcessorHandleImpl,
+      dedupAttributes: Seq[Attribute],
+      argOffsets: Array[Int]): Iterator[InternalRow] = {
+    val timerRunner = new TransformWithStateInPandasPythonRunner(
+      chainedFunc,
+      PythonEvalType.SQL_TRANSFORM_WITH_STATE_PANDAS_UDF,
+      Array(argOffsets),
+      DataTypeUtils.fromAttributes(dedupAttributes),
+      processorHandle,
+      sessionLocalTimeZone,
+      pythonRunnerConf,
+      pythonMetrics,
+      jobArtifactUUID,
+      groupingKeySchema,
+      batchTimestampMs,
+      eventTimeWatermarkForEviction
+    )
+    // TODO test if this works
+    // (key -> empty data iterator -> expired timestamp).map ->
+    // new timerRunner(groupingKey, expired timestamp) ->
+    // execute udf on the expired timestamp
+    val emptyData = Iterator.empty
+    executePython(emptyData, output, timerRunner)
   }
 
   override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan =
