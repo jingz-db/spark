@@ -158,18 +158,20 @@ case class TransformWithStateInPandasExec(
               // Once the input is processed, mark the start time for timeout processing to measure
               // it separately from the overall processing time.
               timeoutProcessingStartTimeNs = System.nanoTime
-              processorHandle.setHandleState(StatefulProcessorHandleState.DATA_PROCESSED)
             })
+        // TODO why this set status is within the iterator
+        // won't this will only be called if the iterator is consumed?
+        if (processorHandle.getHandleState == StatefulProcessorHandleState.INITIALIZED) {
+          throw new Exception("I am after state initialized")
+          processorHandle.setHandleState(StatefulProcessorHandleState.DATA_PROCESSED)
+        }
 
         val timerOutputIterator = processTimers(processorHandle, dedupAttributes, argOffsets)
 
         val timeoutProcessorIter = new Iterator[InternalRow] {
           private lazy val itr = getIterator()
-
           override def hasNext = itr.hasNext
-
           override def next() = itr.next()
-
           private def getIterator(): Iterator[InternalRow] =
             CompletionIterator[InternalRow, Iterator[InternalRow]](
               timerOutputIterator, {
@@ -203,16 +205,22 @@ case class TransformWithStateInPandasExec(
       processorHandle: StatefulProcessorHandleImpl,
       dedupAttributes: Seq[Attribute],
       argOffsets: Array[Int]): Iterator[InternalRow] = {
-    timeMode match {
-      case ProcessingTime =>
-        assert(batchTimestampMs.isDefined)
-        val batchTimestamp = batchTimestampMs.get
-        processTimerRows(processorHandle, dedupAttributes, argOffsets, batchTimestamp)
-      case EventTime =>
-        assert(eventTimeWatermarkForEviction.isDefined)
-        val watermark = eventTimeWatermarkForEviction.get
-        processTimerRows(processorHandle, dedupAttributes, argOffsets, watermark)
-      case _ => Iterator.empty
+    if (processorHandle.getHandleState != StatefulProcessorHandleState.CREATED) {
+      timeMode match {
+        case ProcessingTime =>
+          throw new Exception(s"I am inside processtimers, " +
+            s"handle state: ${processorHandle.getHandleState}")
+          assert(batchTimestampMs.isDefined)
+          val batchTimestamp = batchTimestampMs.get
+          processTimerRows(processorHandle, dedupAttributes, argOffsets, batchTimestamp)
+        case EventTime =>
+          assert(eventTimeWatermarkForEviction.isDefined)
+          val watermark = eventTimeWatermarkForEviction.get
+          processTimerRows(processorHandle, dedupAttributes, argOffsets, watermark)
+        case _ => Iterator.empty
+      }
+    } else {
+      Iterator.empty
     }
   }
 

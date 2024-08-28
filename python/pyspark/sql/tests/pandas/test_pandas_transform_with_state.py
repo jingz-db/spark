@@ -84,6 +84,7 @@ class TransformWithStateInPandasTestsMixin:
         )
         return df_final
 
+    """
     def _test_transform_with_state_in_pandas_basic(
         self, stateful_processor, check_results, single_batch=False
     ):
@@ -211,6 +212,63 @@ class TransformWithStateInPandasTestsMixin:
             Row(id="1", countAsString="2"),
             Row(id="1", countAsString="2"),
         }
+    """
+
+    def _test_transform_with_state_in_pandas_proc_timer(
+            self, stateful_processor, check_results, single_batch=False):
+        input_path = tempfile.mkdtemp()
+        self._prepare_test_resource1(input_path)
+        if not single_batch:
+            self._prepare_test_resource2(input_path)
+
+        df = self._build_test_df(input_path)
+
+        for q in self.spark.streams.active:
+            q.stop()
+        self.assertTrue(df.isStreaming)
+
+        output_schema = StructType(
+            [
+                StructField("id", StringType(), True),
+                StructField("countAsString", StringType(), True),
+            ]
+        )
+
+        query_name = "processing_time_test_query"
+        q = (
+            df.groupBy("id")
+            .transformWithStateInPandas(
+                statefulProcessor=stateful_processor,
+                outputStructType=output_schema,
+                outputMode="Update",
+                timeMode="processingtime",
+            )
+            .writeStream.queryName(query_name)
+            .foreachBatch(check_results)
+            .outputMode("update")
+            .start()
+        )
+
+        self.assertEqual(q.name, query_name)
+        self.assertTrue(q.isActive)
+        q.processAllAvailable()
+        q.awaitTermination(10)
+        self.assertTrue(q.exception() is None)
+
+    def test_transform_with_state_in_pandas_proc_timer(self):
+        def check_results(batch_df, batch_id):
+            if batch_id == 0:
+                assert set(batch_df.sort("id").collect()) == {
+                    Row(id="0", countAsString="2"),
+                    Row(id="1", countAsString="2"),
+                }
+            else:
+                assert set(batch_df.sort("id").collect()) == {
+                    Row(id="0", countAsString="3"),
+                    Row(id="1", countAsString="2"),
+                }
+
+        self._test_transform_with_state_in_pandas_proc_timer(ProcTimeStatefulProcessor(), check_results)
 
     def test_transform_with_state_in_pandas_list_state(self):
         def check_results(batch_df, _):
@@ -225,6 +283,40 @@ class TransformWithStateInPandasTestsMixin:
 
 
 class SimpleStatefulProcessor(StatefulProcessor):
+    dict = {0: {"0": 1, "1": 2}, 1: {"0": 4, "1": 3}}
+    batch_id = 0
+
+    def init(self, handle: StatefulProcessorHandle) -> None:
+        state_schema = StructType([StructField("value", IntegerType(), True)])
+        self.num_violations_state = handle.getValueState("numViolations", state_schema)
+
+    def handleInputRows(self, key, rows, timer_values, expired_timer_info) -> Iterator[pd.DataFrame]:
+        new_violations = 0
+        count = 0
+        key_str = key[0]
+        exists = self.num_violations_state.exists()
+        if exists:
+            existing_violations_row = self.num_violations_state.get()
+            existing_violations = existing_violations_row[0]
+            assert existing_violations == self.dict[0][key_str]
+            self.batch_id = 1
+        else:
+            existing_violations = 0
+        for pdf in rows:
+            pdf_count = pdf.count()
+            count += pdf_count.get("temperature")
+            violations_pdf = pdf.loc[pdf["temperature"] > 100]
+            new_violations += violations_pdf.count().get("temperature")
+        updated_violations = new_violations + existing_violations
+        assert updated_violations == self.dict[self.batch_id][key_str]
+        self.num_violations_state.update((updated_violations,))
+        yield pd.DataFrame({"id": key, "countAsString": str(count)})
+
+    def close(self) -> None:
+        pass
+
+
+class ProcTimeStatefulProcessor(StatefulProcessor):
     dict = {0: {"0": 1, "1": 2}, 1: {"0": 4, "1": 3}}
     batch_id = 0
 

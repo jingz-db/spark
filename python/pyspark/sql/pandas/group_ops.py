@@ -505,7 +505,6 @@ class PandasGroupedOpsMixin:
                 statefulProcessorApiClient.set_handle_state(
                     StatefulProcessorHandleState.INITIALIZED
                 )
-
             statefulProcessorApiClient.set_implicit_key(key)
 
             result = statefulProcessor.handleInputRows(
