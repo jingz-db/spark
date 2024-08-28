@@ -25,7 +25,7 @@ message StateRequest {
     StatefulProcessorCall statefulProcessorCall = 2;
     StateVariableRequest stateVariableRequest = 3;
     ImplicitGroupingKeyRequest implicitGroupingKeyRequest = 4;
-    TimerMiscRequest timerMiscRequest = 5;
+    TimerRequest timerRequest = 5;
   }
 }
 
@@ -59,13 +59,37 @@ message ImplicitGroupingKeyRequest {
   }
 }
 
-message TimerMiscRequest {
+message TimerRequest {
   oneof method {
-    GetBatchTimestampMs getBatchTimestampMs = 1;
+    TimerValueRequest timerValueRequest = 1;
+    ExpiryTimerInfoRequest expiryTimerInfoRequest = 2;
   }
 }
 
-message GetBatchTimestampMs {
+message TimerValueRequest {
+  oneof method {
+    GetProcessingTime getProcessingTimer = 1;
+    GetWatermark getWatermark = 2;
+  }
+}
+
+message ExpiryTimerInfoRequest {
+  oneof method {
+    IsValid isValid = 1;
+    GetExpiryTime getExpiryTime = 2;
+  }
+}
+
+message GetProcessingTime {
+}
+
+message GetWatermark {
+}
+
+message IsValid {
+}
+
+message GetExpiryTime {
 }
 
 message StateCallCommand {

@@ -21,6 +21,7 @@ from typing import Any, TYPE_CHECKING, Iterator, Optional, Union, cast
 from pyspark.sql import Row
 from pyspark.sql.streaming.stateful_processor_api_client import StatefulProcessorApiClient
 from pyspark.sql.streaming.list_state_client import ListStateClient, ListStateIterator
+from pyspark.sql.streaming.timer_client import ExpiryTimerInfoClient, TimerValueClient
 from pyspark.sql.streaming.value_state_client import ValueStateClient
 from pyspark.sql.types import StructType, _create_row, _parse_datatype_string
 
@@ -133,43 +134,27 @@ class ListState:
 class TimerValues:
     def __init__(
             self,
-            current_processing_time_opt: Optional[int],
-            current_watermark_opt: Optional[int]) -> None:
-        self._current_processing_time = current_processing_time_opt
-        self._current_watermark = current_watermark_opt
+            statefulProcessorApiClient: StatefulProcessorApiClient) -> None:
+        self._timer_value_client = TimerValueClient(statefulProcessorApiClient)
 
     def get_current_processing_time_in_ms(self) -> int:
-        if self._current_processing_time is not None:
-            return self._current_processing_time
-        else:
-            return -1
+        return self._timer_value_client.get_processing_time_in_ms()
 
     def get_current_watermark_in_ms(self) -> int:
-        if self._current_watermark is not None:
-            return self._current_watermark
-        else:
-            return -1
+        return self._timer_value_client.get_current_watermark_in_ms()
 
 
 class ExpiredTimerInfo:
     def __init__(
             self,
-            is_valid: bool,
-            expiry_time_in_ms_opt: Optional[int] = None,
-            timeout_mode: str = "none"):
-        self._is_valid = is_valid
-        self._expiry_time_in_ms = expiry_time_in_ms_opt
-        self._timeoutMode = timeout_mode
+            statefulProcessorApiClient: StatefulProcessorApiClient) -> None:
+        self._expiry_timer_info_client = ExpiryTimerInfoClient(statefulProcessorApiClient)
 
     def is_valid(self) -> bool:
-        self._is_valid
+        return self._expiry_timer_info_client.is_valid()
 
     def get_expiry_time_in_ms(self) -> int:
-        if self._expiry_time_in_ms is not None:
-            return self._expiry_time_in_ms
-        else:
-            return -1
->>>>>>> ab1670ee9c (compiling)
+        return self._expiry_timer_info_client.get_expiry_time_in_ms()
 
 
 class StatefulProcessorHandle:
@@ -200,7 +185,6 @@ class StatefulProcessorHandle:
         self.stateful_processor_api_client.get_value_state(state_name, schema)
         return ValueState(ValueStateClient(self.stateful_processor_api_client), state_name, schema)
 
-<<<<<<< HEAD
     def getListState(self, state_name: str, schema: Union[StructType, str]) -> ListState:
         """
         Function to create new or return existing single value state variable of given type.
@@ -217,7 +201,7 @@ class StatefulProcessorHandle:
         """
         self.stateful_processor_api_client.get_list_state(state_name, schema)
         return ListState(ListStateClient(self.stateful_processor_api_client), state_name, schema)
-=======
+
     def registerTimer(self, expiry_time_stamp_ms: int) -> None:
         self.stateful_processor_api_client.register_timer(expiry_time_stamp_ms)
 
@@ -226,7 +210,6 @@ class StatefulProcessorHandle:
 
     def listTimers(self) -> Iterator:
         ...
->>>>>>> ab1670ee9c (compiling)
 
 
 class StatefulProcessor(ABC):
@@ -254,9 +237,8 @@ class StatefulProcessor(ABC):
     @abstractmethod
     def handleInputRows(
         self, key: Any, rows: Iterator["PandasDataFrameLike"],
-            timer_values: TimerValues = TimerValues(None, None),
-            expired_timer_info: ExpiredTimerInfo = ExpiredTimerInfo(False)
-    ) -> Iterator["PandasDataFrameLike"]:
+            timer_values: TimerValues,
+            expired_timer_info: ExpiredTimerInfo) -> Iterator["PandasDataFrameLike"]:
         """
         Function that will allow users to interact with input data rows along with the grouping key.
         It should take parameters (key, Iterator[`pandas.DataFrame`]) and return another

@@ -31,7 +31,7 @@ import org.apache.spark.sql.{Encoders, Row}
 import org.apache.spark.sql.api.python.PythonSQLUtils
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.execution.streaming.{ImplicitGroupingKeyTracker, StatefulProcessorHandleImpl, StatefulProcessorHandleState}
-import org.apache.spark.sql.execution.streaming.state.StateMessage.{HandleState, ImplicitGroupingKeyRequest, ListStateCall, StatefulProcessorCall, StateRequest, StateResponse, StateVariableRequest, TimerMiscRequest, TimerStateCallCommand, ValueStateCall}
+import org.apache.spark.sql.execution.streaming.state.StateMessage.{ExpiryTimerInfoRequest, HandleState, ImplicitGroupingKeyRequest, ListStateCall, StatefulProcessorCall, StateRequest, StateResponse, StateVariableRequest, TimerRequest, TimerStateCallCommand, TimerValueRequest, ValueStateCall}
 import org.apache.spark.sql.streaming.{ListState, ValueState}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.ArrowUtils
@@ -63,7 +63,8 @@ class TransformWithStateInPandasStateServer(
       ExpressionEncoder.Deserializer[Row], ExpressionEncoder.Serializer[Row])] = null,
     listStateIteratorMapForTest: mutable.HashMap[String, Iterator[Row]] = null,
     batchTimestampMs: Option[Long] = None,
-    eventTimeWatermarkForEviction: Option[Long] = None)
+    eventTimeWatermarkForEviction: Option[Long] = None,
+    expiryTimestampMs: Option[Long] = None)
   extends Runnable with Logging {
   private val keyRowDeserializer: ExpressionEncoder.Deserializer[Row] =
     ExpressionEncoder(groupingKeySchema).resolveAndBind().createDeserializer()
@@ -142,25 +143,41 @@ class TransformWithStateInPandasStateServer(
         handleStatefulProcessorCall(message.getStatefulProcessorCall)
       case StateRequest.MethodCase.STATEVARIABLEREQUEST =>
         handleStateVariableRequest(message.getStateVariableRequest)
-      case StateRequest.MethodCase.TIMERMISCREQUEST =>
+      case StateRequest.MethodCase.TIMERREQUEST =>
         // TODO if batch timestamp is empty, the data hasn't been processed yet
         // do not process any timer rows
-        handleTimerMiscRequest(message.getTimerMiscRequest)
+        handleTimerRequest(message.getTimerRequest)
       case _ =>
         throw new IllegalArgumentException("Invalid method call handle request")
     }
   }
 
-  private def handleTimerMiscRequest(message: TimerMiscRequest): Unit = {
+  private def handleTimerRequest(message: TimerRequest): Unit = {
     message.getMethodCase match {
-      case TimerMiscRequest.MethodCase.GETBATCHTIMESTAMPMS =>
-        if (batchTimestampMs.isDefined) {
-          // Serialize timestamp value as a byte array
-          val valueStr = batchTimestampMs.get.toString()
-          val byteString = ByteString.copyFromUtf8(valueStr)
-          sendResponse(0, null, byteString)
-        } else {
-          // data rows hansn't been processed yet
+      case TimerRequest.MethodCase.TIMERVALUEREQUEST =>
+        val timerRequest = message.getTimerValueRequest()
+        timerRequest.getMethodCase match {
+          case TimerValueRequest.MethodCase.GETPROCESSINGTIMER =>
+            val valueStr = batchTimestampMs.getOrElse(-1L).toString()
+            sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
+          case TimerValueRequest.MethodCase.GETWATERMARK =>
+            val valueStr = eventTimeWatermarkForEviction.getOrElse(-1L).toString()
+            sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
+          case _ =>
+            throw new IllegalArgumentException("handle timer value request")
+        }
+
+      case TimerRequest.MethodCase.EXPIRYTIMERINFOREQUEST =>
+        val timerRequest = message.getExpiryTimerInfoRequest()
+        timerRequest.getMethodCase match {
+          case ExpiryTimerInfoRequest.MethodCase.ISVALID =>
+            val valueStr = expiryTimestampMs.isDefined.toString()
+            sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
+          case ExpiryTimerInfoRequest.MethodCase.GETEXPIRYTIME =>
+            val valueStr = expiryTimestampMs.getOrElse(-1L).toString()
+            sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
+          case _ =>
+            throw new IllegalArgumentException("handle expiry timer info request")
         }
 
       case _ =>

@@ -508,7 +508,10 @@ class PandasGroupedOpsMixin:
 
             statefulProcessorApiClient.set_implicit_key(key)
 
-            result = statefulProcessor.handleInputRows(key, inputRows)
+            result = statefulProcessor.handleInputRows(
+                key, inputRows,
+                TimerValues(statefulProcessorApiClient),
+                ExpiredTimerInfo(statefulProcessorApiClient))
 
             return result
 

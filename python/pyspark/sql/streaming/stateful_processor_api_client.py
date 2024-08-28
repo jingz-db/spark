@@ -140,6 +140,7 @@ class StatefulProcessorApiClient:
         if status != 0:
             # TODO(SPARK-49233): Classify user facing errors.
             raise PySparkRuntimeError(f"Error initializing value state: " f"{response_message[1]}")
+
     def get_batch_timestamp(self) -> int:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
         get_batch_timestamp = stateMessage.GetBatchTimestampMs()

@@ -29,7 +29,7 @@ import org.apache.spark.sql.catalyst.expressions.{Ascending, Attribute, Expressi
 import org.apache.spark.sql.catalyst.plans.logical.{EventTime, ProcessingTime}
 import org.apache.spark.sql.catalyst.plans.physical.Distribution
 import org.apache.spark.sql.catalyst.types.DataTypeUtils
-import org.apache.spark.sql.execution.{SparkPlan, UnaryExecNode}
+import org.apache.spark.sql.execution.{ObjectOperator, SparkPlan, UnaryExecNode}
 import org.apache.spark.sql.execution.metric.SQLMetric
 import org.apache.spark.sql.execution.python.PandasGroupUtils.{executePython, groupAndProject, resolveArgOffsets}
 import org.apache.spark.sql.execution.streaming.{StatefulOperatorPartitioning, StatefulOperatorStateInfo, StatefulProcessorHandleImpl, StatefulProcessorHandleState, StateStoreWriter, WatermarkSupport}
@@ -207,11 +207,11 @@ case class TransformWithStateInPandasExec(
       case ProcessingTime =>
         assert(batchTimestampMs.isDefined)
         val batchTimestamp = batchTimestampMs.get
-        processTimerRows(processorHandle, dedupAttributes, argOffsets)
+        processTimerRows(processorHandle, dedupAttributes, argOffsets, batchTimestamp)
       case EventTime =>
         assert(eventTimeWatermarkForEviction.isDefined)
         val watermark = eventTimeWatermarkForEviction.get
-        processTimerRows(processorHandle, dedupAttributes, argOffsets)
+        processTimerRows(processorHandle, dedupAttributes, argOffsets, watermark)
       case _ => Iterator.empty
     }
   }
@@ -219,27 +219,42 @@ case class TransformWithStateInPandasExec(
   private def processTimerRows(
       processorHandle: StatefulProcessorHandleImpl,
       dedupAttributes: Seq[Attribute],
-      argOffsets: Array[Int]): Iterator[InternalRow] = {
-    val timerRunner = new TransformWithStateInPandasPythonRunner(
-      chainedFunc,
-      PythonEvalType.SQL_TRANSFORM_WITH_STATE_PANDAS_UDF,
-      Array(argOffsets),
-      DataTypeUtils.fromAttributes(dedupAttributes),
-      processorHandle,
-      sessionLocalTimeZone,
-      pythonRunnerConf,
-      pythonMetrics,
-      jobArtifactUUID,
-      groupingKeySchema,
-      batchTimestampMs,
-      eventTimeWatermarkForEviction
-    )
-    // TODO test if this works
-    // (key -> empty data iterator -> expired timestamp).map ->
-    // new timerRunner(groupingKey, expired timestamp) ->
-    // execute udf on the expired timestamp
-    val emptyData = Iterator.empty
-    executePython(emptyData, output, timerRunner)
+      argOffsets: Array[Int],
+      timestamp: Long): Iterator[InternalRow] = {
+    processorHandle.getExpiredTimers(timestamp)
+      .flatMap { case (keyObj, expiryTimestampMs) =>
+        val timerRunner = new TransformWithStateInPandasPythonRunner(
+          chainedFunc,
+          PythonEvalType.SQL_TRANSFORM_WITH_STATE_PANDAS_UDF,
+          Array(argOffsets),
+          DataTypeUtils.fromAttributes(dedupAttributes),
+          processorHandle,
+          sessionLocalTimeZone,
+          pythonRunnerConf,
+          pythonMetrics,
+          jobArtifactUUID,
+          groupingKeySchema,
+          batchTimestampMs,
+          eventTimeWatermarkForEviction,
+          Option(expiryTimestampMs)
+        )
+        // TODO test if this works
+        // (key -> empty data iterator -> expired timestamp).map ->
+        // new timerRunner(groupingKey, expired timestamp) ->
+        // execute udf on the expired timestamp
+
+        // TODO create the above data iterator with the keyObj
+        val keyToRowEncoder =
+          ObjectOperator.wrapObjectToRow(groupingKeyExprEncoder.schema)
+        val emptyData: Iterator[(InternalRow, Iterator[InternalRow])] = {
+          val groupingKeyInternalRow = keyToRowEncoder.apply(keyObj)
+          // create an iterator with single element: groupingKey -> empty data
+          Iterator.single((groupingKeyInternalRow, Iterator.empty))
+        }
+
+        // theoretically this should output nothing
+        executePython(emptyData, output, timerRunner)
+      }
   }
 
   override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan =
