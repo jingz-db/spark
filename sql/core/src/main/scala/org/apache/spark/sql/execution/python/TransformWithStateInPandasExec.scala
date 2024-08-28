@@ -205,7 +205,7 @@ case class TransformWithStateInPandasExec(
       processorHandle: StatefulProcessorHandleImpl,
       dedupAttributes: Seq[Attribute],
       argOffsets: Array[Int]): Iterator[InternalRow] = {
-    if (processorHandle.getHandleState != StatefulProcessorHandleState.CREATED) {
+    if (processorHandle.getHandleState == StatefulProcessorHandleState.DATA_PROCESSED) {
       timeMode match {
         case ProcessingTime =>
           throw new Exception(s"I am inside processtimers, " +
