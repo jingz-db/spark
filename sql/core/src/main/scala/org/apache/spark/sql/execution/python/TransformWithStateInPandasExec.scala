@@ -128,8 +128,10 @@ case class TransformWithStateInPandasExec(
       case (store: StateStore, dataIterator: Iterator[InternalRow]) =>
         val allUpdatesTimeMs = longMetric("allUpdatesTimeMs")
         val commitTimeMs = longMetric("commitTimeMs")
+        val timeoutLatencyMs = longMetric("allRemovalsTimeMs")
         val currentTimeNs = System.nanoTime
         val updatesStartTimeNs = currentTimeNs
+        var timeoutProcessingStartTimeNs = currentTimeNs
 
         val data = groupAndProject(dataIterator, groupingAttributes, child.output, dedupAttributes)
 
@@ -155,8 +157,7 @@ case class TransformWithStateInPandasExec(
             dataOutputIterator, {
               // Once the input is processed, mark the start time for timeout processing to measure
               // it separately from the overall processing time.
-              // TODO fix this
-              // timeoutProcessingStartTimeNs = System.nanoTime
+              timeoutProcessingStartTimeNs = System.nanoTime
               processorHandle.setHandleState(StatefulProcessorHandleState.DATA_PROCESSED)
             })
 
@@ -174,9 +175,8 @@ case class TransformWithStateInPandasExec(
               timerOutputIterator, {
                 // Note: `timeoutLatencyMs` also includes the time the parent operator took for
                 // processing output returned through iterator.
-                // TODO fix this
-                // timeoutLatencyMs += NANOSECONDS.toMillis(System.nanoTime -
-                // timeoutProcessingStartTimeNs)
+                timeoutLatencyMs += NANOSECONDS.toMillis(
+                  System.nanoTime - timeoutProcessingStartTimeNs)
                 processorHandle.setHandleState(StatefulProcessorHandleState.TIMER_PROCESSED)
               })
         }
@@ -242,8 +242,6 @@ case class TransformWithStateInPandasExec(
         // (key -> empty data iterator -> expired timestamp).map ->
         // new timerRunner(groupingKey, expired timestamp) ->
         // execute udf on the expired timestamp
-
-        // TODO create the above data iterator with the keyObj
         val keyToRowEncoder =
           ObjectOperator.wrapObjectToRow(groupingKeyExprEncoder.schema)
         val emptyData: Iterator[(InternalRow, Iterator[InternalRow])] = {
@@ -252,7 +250,7 @@ case class TransformWithStateInPandasExec(
           Iterator.single((groupingKeyInternalRow, Iterator.empty))
         }
 
-        // theoretically this should output nothing
+        // theoretically this should only output timer rows
         executePython(emptyData, output, timerRunner)
       }
   }
