@@ -150,17 +150,20 @@ class TransformWithStateInPandasStateServer(
     }
   }
 
-  private def handleTimerRequest(message: TimerRequest): Unit = {
-    // if data rows has not been processed yet, return -1 as timestamp
+  private[sql] def handleTimerRequest(message: TimerRequest): Unit = {
+    // TODO how to send long type value
     message.getMethodCase match {
       case TimerRequest.MethodCase.TIMERVALUEREQUEST =>
         val timerRequest = message.getTimerValueRequest()
         timerRequest.getMethodCase match {
           case TimerValueRequest.MethodCase.GETPROCESSINGTIMER =>
-            val valueStr = batchTimestampMs.getOrElse(-1L).toString()
+            val valueStr =
+              if (batchTimestampMs.isDefined) batchTimestampMs.get.toString else "-1"
             sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
           case TimerValueRequest.MethodCase.GETWATERMARK =>
-            val valueStr = eventTimeWatermarkForEviction.getOrElse(-1L).toString()
+            val valueStr = if (eventTimeWatermarkForEviction.isDefined) {
+              eventTimeWatermarkForEviction.get.toString()
+            } else "-1"
             sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
           case _ =>
             throw new IllegalArgumentException("Invalid timer value method call")
@@ -173,13 +176,15 @@ class TransformWithStateInPandasStateServer(
             val valueStr = expiryTimestampMs.isDefined.toString()
             sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
           case ExpiryTimerInfoRequest.MethodCase.GETEXPIRYTIME =>
-            val valueStr = expiryTimestampMs.getOrElse(-1L).toString()
+            val valueStr =
+              if (expiryTimestampMs.isDefined) expiryTimestampMs.get.toString else "-1"
             sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
           case _ =>
             throw new IllegalArgumentException("Invalid expiry timer info method call")
         }
 
       case _ =>
+
         throw new IllegalArgumentException("Invalid timer request method call")
     }
   }
@@ -234,17 +239,13 @@ class TransformWithStateInPandasStateServer(
             statefulProcessorHandle.registerTimer(expiryTimestamp)
           case TimerStateCallCommand.MethodCase.DELETE =>
             statefulProcessorHandle.deleteTimer(expiryTimestamp)
-            /*
-          case TimerStateCallCommand.MethodCase.LISTTIMERS =>
-            // Serialize the timer row as a byte array
-            val valueBytes = PythonSQLUtils.toPyRow(
-              statefulProcessorHandle.listTimers()
-            )
-            val byteString = ByteString.copyFrom(valueBytes)
-            sendResponse(0, null, byteString) */
+          case TimerStateCallCommand.MethodCase.LIST =>
+            // TODO how to send list timer result
+            statefulProcessorHandle.listTimers()
           case _ =>
             throw new IllegalArgumentException("Invalid timer state method call")
         }
+        sendResponse(0)
       case _ =>
         throw new IllegalArgumentException("Invalid method call")
     }
