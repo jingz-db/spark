@@ -98,7 +98,6 @@ message StateCallCommand {
 }
 
 message TimerStateCallCommand {
-  int64 expiryTimestampMs = 1;
   oneof method {
     RegisterTimer register = 2;
     DeleteTimers delete = 3;
@@ -142,9 +141,11 @@ message Get {
 }
 
 message RegisterTimer {
+  int64 expiryTimestampMs = 1;
 }
 
 message DeleteTimers {
+  int64 expiryTimestampMs = 1;
 }
 
 message ListTimers {

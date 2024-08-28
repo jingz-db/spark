@@ -164,8 +164,7 @@ class StatefulProcessorApiClient:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
 
         state_call_command = stateMessage.TimerStateCallCommand()
-        state_call_command.expiryTimestampMs = expiry_time_stamp_ms
-        state_call_command.register = stateMessage.RegisterTimer()
+        state_call_command.register = stateMessage.RegisterTimer(expiryTimestampMs=expiry_time_stamp_ms)
         call = stateMessage.StatefulProcessorCall(timerStateCall=state_call_command)
         message = stateMessage.StateRequest(StatefulProcessorCall=call)
 
@@ -180,8 +179,7 @@ class StatefulProcessorApiClient:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
 
         state_call_command = stateMessage.TimerStateCallCommand()
-        state_call_command.expiryTimestampMs = expiry_time_stamp_ms
-        state_call_command.delete = stateMessage.DeleteTimers()
+        state_call_command.delete = stateMessage.DeleteTimers(expiryTimestampMs=expiry_time_stamp_ms)
         call = stateMessage.StatefulProcessorCall(timerStateCall=state_call_command)
         message = stateMessage.StateRequest(StatefulProcessorCall=call)
 
@@ -191,6 +189,10 @@ class StatefulProcessorApiClient:
         if status != 0:
             # TODO(SPARK-49233): Classify user facing errors.
             raise PySparkRuntimeError(f"Error initializing value state: " f"{response_message[1]}")
+
+    def list_timers(self) -> None:
+        # TODO figure out how to get data
+        ...
 
     def _send_proto_message(self, message: bytes) -> None:
         # Writing zero here to indicate message version. This allows us to evolve the message

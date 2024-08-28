@@ -233,11 +233,14 @@ class TransformWithStateInPandasStateServer(
         val schema = message.getGetListState.getSchema
         initializeStateVariable(stateName, schema, "listState")
       case StatefulProcessorCall.MethodCase.TIMERSTATECALL =>
-        val expiryTimestamp = message.getTimerStateCall.getExpiryTimestampMs
         message.getTimerStateCall.getMethodCase match {
           case TimerStateCallCommand.MethodCase.REGISTER =>
+            val expiryTimestamp =
+              message.getTimerStateCall.getRegister.getExpiryTimestampMs
             statefulProcessorHandle.registerTimer(expiryTimestamp)
           case TimerStateCallCommand.MethodCase.DELETE =>
+            val expiryTimestamp =
+              message.getTimerStateCall.getRegister.getExpiryTimestampMs
             statefulProcessorHandle.deleteTimer(expiryTimestamp)
           case TimerStateCallCommand.MethodCase.LIST =>
             // TODO how to send list timer result

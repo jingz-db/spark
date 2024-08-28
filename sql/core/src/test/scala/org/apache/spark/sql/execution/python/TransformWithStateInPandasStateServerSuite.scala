@@ -287,8 +287,7 @@ class TransformWithStateInPandasStateServerSuite extends SparkFunSuite with Befo
   test("stateful processor register timer") {
     val message = StatefulProcessorCall.newBuilder().setTimerStateCall(
       TimerStateCallCommand.newBuilder()
-        .setRegister(RegisterTimer.newBuilder().build())
-        .setExpiryTimestampMs(10L)
+        .setRegister(RegisterTimer.newBuilder().setExpiryTimestampMs(10L).build())
         .build()
     ).build()
     stateServer.handleStatefulProcessorCall(message)
@@ -299,8 +298,7 @@ class TransformWithStateInPandasStateServerSuite extends SparkFunSuite with Befo
   test("stateful processor delete timer") {
     val message = StatefulProcessorCall.newBuilder().setTimerStateCall(
       TimerStateCallCommand.newBuilder()
-        .setDelete(DeleteTimers.newBuilder().build())
-        .setExpiryTimestampMs(10L)
+        .setDelete(DeleteTimers.newBuilder().setExpiryTimestampMs(10L).build())
         .build()
     ).build()
     stateServer.handleStatefulProcessorCall(message)
@@ -312,7 +310,6 @@ class TransformWithStateInPandasStateServerSuite extends SparkFunSuite with Befo
     val message = StatefulProcessorCall.newBuilder().setTimerStateCall(
       TimerStateCallCommand.newBuilder()
         .setList(ListTimers.newBuilder().build())
-        .setExpiryTimestampMs(10L)
         .build()
     ).build()
     stateServer.handleStatefulProcessorCall(message)
