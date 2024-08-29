@@ -176,7 +176,7 @@ class StatefulProcessorApiClient:
         status = response_message[0]
         if status != 0:
             # TODO(SPARK-49233): Classify user facing errors.
-            raise PySparkRuntimeError(f"Error initializing value state: " f"{response_message[1]}")
+            raise PySparkRuntimeError(f"Error register timer: " f"{response_message[1]}")
 
     def delete_timers(self, expiry_time_stamp_ms: int) -> None:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
@@ -191,15 +191,49 @@ class StatefulProcessorApiClient:
         status = response_message[0]
         if status != 0:
             # TODO(SPARK-49233): Classify user facing errors.
-            raise PySparkRuntimeError(f"Error initializing value state: " f"{response_message[1]}")
+            raise PySparkRuntimeError(f"Error delete timers: " f"{response_message[1]}")
 
-    def list_timers(self) -> None:
-        # TODO figure out how to get data
-        ...
+    def list_timers(self) -> list[int]:
+        import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
 
-    def get_expiry_timers(self) -> list[(any, int)]:
-        # TODO figure out how to get data
-        return []
+        state_call_command = stateMessage.TimerStateCallCommand()
+        state_call_command.list = stateMessage.ListTimers()
+        call = stateMessage.StatefulProcessorCall(timerStateCall=state_call_command)
+        message = stateMessage.StateRequest(StatefulProcessorCall=call)
+
+        self._send_proto_message(message.SerializeToString())
+        response_message = self._receive_proto_message()
+        status = response_message[0]
+        if status != 0:
+            # TODO(SPARK-49233): Classify user facing errors.
+            raise PySparkRuntimeError(f"Error getting list timers: " f"{response_message[1]}")
+        else:
+            if len(response_message[2]) == 0:
+                return []
+            # TODO: use arrow
+            timestamp_list = [int(element) for element in str(response_message[2]).split(",") if element]
+            return timestamp_list
+
+    def get_expiry_timers(self, expiry_timestamp: int) -> list[(any, int)]:
+        import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
+
+        expiry_timer_call = stateMessage.ExpiryTimerRequest(expiryTimestampMs=expiry_timestamp)
+        timer_request = stateMessage.TimerRequest(expiryTimerRequest=expiry_timer_call)
+        message = stateMessage.StateRequest(timerRequest=timer_request)
+
+        self._send_proto_message(message.SerializeToString())
+        response_message = self._receive_proto_message()
+        status = response_message[0]
+        if status != 0:
+            # TODO(SPARK-49233): Classify user facing errors.
+            raise PySparkRuntimeError(f"Error getting expiry timers: " f"{response_message[1]}")
+        else:
+            if len(response_message[2]) == 0:
+                return []
+            # TODO: use arrow
+            pair_list = [element for element in str(response_message[2]).split(";") if element]
+            timestamp_list: list[(any, int)] = [(s.split(',')[0], int(s.split(',')[1])) for s in pair_list]
+            return timestamp_list
 
     def get_batch_timestamp(self) -> int:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
@@ -235,7 +269,7 @@ class StatefulProcessorApiClient:
         status = response_message[0]
         if status != 0:
             # TODO(SPARK-49233): Classify user facing errors.
-            raise PySparkRuntimeError(f"Error getting processing timestamp: " f"{response_message[1]}")
+            raise PySparkRuntimeError(f"Error getting eventtime timestamp: " f"{response_message[1]}")
         else:
             if len(response_message[2]) == 0:
                 return -1

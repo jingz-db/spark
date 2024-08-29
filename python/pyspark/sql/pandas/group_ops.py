@@ -508,21 +508,20 @@ class PandasGroupedOpsMixin:
                 )
             statefulProcessorApiClient.set_implicit_key(key)
 
-            # process with empty timer value first
+            batch_timestamp = statefulProcessorApiClient.get_batch_timestamp()
+            watermark_timestamp = statefulProcessorApiClient.get_watermark_timestamp()
+            # process with invalid expiry timer info first
             data_iter = statefulProcessor.handleInputRows(
-                key, inputRows, TimerValues(), ExpiredTimerInfo(False))
+                key, inputRows, TimerValues(batch_timestamp, watermark_timestamp), ExpiredTimerInfo(False))
             statefulProcessorApiClient.set_handle_state(
                 StatefulProcessorHandleState.DATA_PROCESSED
             )
 
-            batch_timestamp = -1
-            watermark_timestamp = -1
             if timeMode == "processingtime":
-                batch_timestamp = statefulProcessorApiClient.get_batch_timestamp()
+                expiry_list: list[(any, int)] = statefulProcessorApiClient.get_expiry_timers(batch_timestamp)
             elif timeMode == "eventtime":
-                watermark_timestamp = statefulProcessorApiClient.get_watermark_timestamp()
+                expiry_list: list[(any, int)] = statefulProcessorApiClient.get_expiry_timers(watermark_timestamp)
 
-            expiry_list: list[(any, int)] = statefulProcessorApiClient.get_expiry_timers()
             timer_iter = iter([])
             for ele in expiry_list:
                 key_obj, expiry_timestamp = ele

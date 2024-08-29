@@ -62,7 +62,7 @@ message ImplicitGroupingKeyRequest {
 message TimerRequest {
   oneof method {
     TimerValueRequest timerValueRequest = 1;
-    ExpiryTimerInfoRequest expiryTimerInfoRequest = 2;
+    ExpiryTimerRequest expiryTimerRequest = 2;
   }
 }
 
@@ -73,23 +73,14 @@ message TimerValueRequest {
   }
 }
 
-message ExpiryTimerInfoRequest {
-  oneof method {
-    IsValid isValid = 1;
-    GetExpiryTime getExpiryTime = 2;
-  }
+message ExpiryTimerRequest {
+  int64 expiryTimestampMs = 1;
 }
 
 message GetProcessingTime {
 }
 
 message GetWatermark {
-}
-
-message IsValid {
-}
-
-message GetExpiryTime {
 }
 
 message StateCallCommand {
@@ -99,9 +90,9 @@ message StateCallCommand {
 
 message TimerStateCallCommand {
   oneof method {
-    RegisterTimer register = 2;
-    DeleteTimers delete = 3;
-    ListTimers list = 4;
+    RegisterTimer register = 1;
+    DeleteTimers delete = 2;
+    ListTimers list = 3;
   }
 }
 

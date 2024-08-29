@@ -150,7 +150,6 @@ class TransformWithStateInPandasStateServer(
   }
 
   private[sql] def handleTimerRequest(message: TimerRequest): Unit = {
-    // TODO how to send long type value
     message.getMethodCase match {
       case TimerRequest.MethodCase.TIMERVALUEREQUEST =>
         val timerRequest = message.getTimerValueRequest()
@@ -167,6 +166,17 @@ class TransformWithStateInPandasStateServer(
           case _ =>
             throw new IllegalArgumentException("Invalid timer value method call")
         }
+
+      case TimerRequest.MethodCase.EXPIRYTIMERREQUEST =>
+        // TODO how to send list value
+        val expiryRequest = message.getExpiryTimerRequest()
+        val expiryTimestamp = expiryRequest.getExpiryTimestampMs
+        val iter = statefulProcessorHandle.getExpiredTimers(expiryTimestamp)
+        var responseStr: String = ""
+        iter.foreach { p =>
+          responseStr = responseStr + s"(${p._1},${p._2});"
+        }
+        sendResponse(0, null, ByteString.copyFromUtf8(responseStr))
 
       case _ =>
 
@@ -205,10 +215,10 @@ class TransformWithStateInPandasStateServer(
             statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.INITIALIZED)
           case HandleState.DATA_PROCESSED =>
             logInfo(log"set handle state to Data Processed")
-            statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.INITIALIZED)
+            statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.DATA_PROCESSED)
           case HandleState.TIMER_PROCESSED =>
             logInfo(log"set handle state to Timer Processed")
-            statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.INITIALIZED)
+            statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.TIMER_PROCESSED)
           case HandleState.CLOSED =>
             logInfo(log"set handle state to Closed")
             statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.CLOSED)
@@ -229,17 +239,23 @@ class TransformWithStateInPandasStateServer(
             val expiryTimestamp =
               message.getTimerStateCall.getRegister.getExpiryTimestampMs
             statefulProcessorHandle.registerTimer(expiryTimestamp)
+            sendResponse(0)
           case TimerStateCallCommand.MethodCase.DELETE =>
             val expiryTimestamp =
               message.getTimerStateCall.getRegister.getExpiryTimestampMs
             statefulProcessorHandle.deleteTimer(expiryTimestamp)
+            sendResponse(0)
           case TimerStateCallCommand.MethodCase.LIST =>
             // TODO how to send list timer result
-            statefulProcessorHandle.listTimers()
+            val timestampIter = statefulProcessorHandle.listTimers()
+            var responseStr: String = ""
+            timestampIter.foreach { timestamp =>
+              responseStr = responseStr + s"$timestamp,"
+            }
+            sendResponse(0, null, ByteString.copyFromUtf8(responseStr))
           case _ =>
             throw new IllegalArgumentException("Invalid timer state method call")
         }
-        sendResponse(0)
       case _ =>
         throw new IllegalArgumentException("Invalid method call")
     }
