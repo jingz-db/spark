@@ -20,9 +20,7 @@ from typing import Any, TYPE_CHECKING, Iterator, Optional, Union, cast
 
 from pyspark.sql import Row
 from pyspark.sql.streaming.stateful_processor_api_client import StatefulProcessorApiClient
-from pyspark.sql.streaming.list_state_client import ListStateClient, ListStateIterator
-from pyspark.sql.streaming.timer_client import ExpiryTimerInfoClient, TimerValueClient
-from pyspark.sql.streaming.value_state_client import ValueStateClient
+from pyspark.sql.streaming.value_state_client import ListStateClient, ListStateIterator, ValueStateClient
 from pyspark.sql.types import StructType, _create_row, _parse_datatype_string
 
 if TYPE_CHECKING:
@@ -134,27 +132,31 @@ class ListState:
 class TimerValues:
     def __init__(
             self,
-            statefulProcessorApiClient: StatefulProcessorApiClient) -> None:
-        self._timer_value_client = TimerValueClient(statefulProcessorApiClient)
+            current_processing_time_in_ms: int = -1,
+            current_watermark_in_ms: int = -1) -> None:
+        self._current_processing_time_in_ms = current_processing_time_in_ms
+        self._current_watermark_in_ms = current_watermark_in_ms
 
     def get_current_processing_time_in_ms(self) -> int:
-        return self._timer_value_client.get_processing_time_in_ms()
+        return self._current_processing_time_in_ms
 
     def get_current_watermark_in_ms(self) -> int:
-        return self._timer_value_client.get_current_watermark_in_ms()
+        return self._current_watermark_in_ms
 
 
 class ExpiredTimerInfo:
     def __init__(
             self,
-            statefulProcessorApiClient: StatefulProcessorApiClient) -> None:
-        self._expiry_timer_info_client = ExpiryTimerInfoClient(statefulProcessorApiClient)
+            is_valid: bool,
+            expiry_time_in_ms: int = -1) -> None:
+        self._is_valid = is_valid
+        self._expiry_time_in_ms = expiry_time_in_ms
 
     def is_valid(self) -> bool:
-        return self._expiry_timer_info_client.is_valid()
+        return self._is_valid
 
     def get_expiry_time_in_ms(self) -> int:
-        return self._expiry_timer_info_client.get_expiry_time_in_ms()
+        return self._expiry_time_in_ms
 
 
 class StatefulProcessorHandle:

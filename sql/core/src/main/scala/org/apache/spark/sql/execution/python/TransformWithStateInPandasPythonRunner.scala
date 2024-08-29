@@ -52,8 +52,7 @@ class TransformWithStateInPandasPythonRunner(
     jobArtifactUUID: Option[String],
     groupingKeySchema: StructType,
     batchTimestampMs: Option[Long] = None,
-    eventTimeWatermarkForEviction: Option[Long] = None,
-    expiryTimestampMs: Option[Long] = None)
+    eventTimeWatermarkForEviction: Option[Long] = None)
   extends BasePythonRunner[InType, OutType](funcs.map(_._1), evalType, argOffsets, jobArtifactUUID)
   with PythonArrowInput[InType]
   with BasicPythonArrowOutput
@@ -111,8 +110,7 @@ class TransformWithStateInPandasPythonRunner(
         groupingKeySchema, timeZoneId, errorOnDuplicatedFieldNames, largeVarTypes,
         sqlConf.arrowTransformWithStateInPandasMaxRecordsPerBatch,
         batchTimestampMs = batchTimestampMs,
-        eventTimeWatermarkForEviction = eventTimeWatermarkForEviction,
-        expiryTimestampMs = expiryTimestampMs))
+        eventTimeWatermarkForEviction = eventTimeWatermarkForEviction))
 
     context.addTaskCompletionListener[Unit] { _ =>
       logInfo(log"completion listener called")

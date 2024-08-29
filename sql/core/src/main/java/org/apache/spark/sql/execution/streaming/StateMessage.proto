@@ -172,7 +172,8 @@ enum HandleState {
   CREATED = 0;
   INITIALIZED = 1;
   DATA_PROCESSED = 2;
-  CLOSED = 3;
+  TIMER_PROCESSED = 3;
+  CLOSED = 4;
 }
 
 message SetHandleState {

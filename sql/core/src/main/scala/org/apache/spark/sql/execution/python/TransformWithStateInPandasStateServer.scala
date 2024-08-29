@@ -31,7 +31,7 @@ import org.apache.spark.sql.{Encoders, Row}
 import org.apache.spark.sql.api.python.PythonSQLUtils
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.execution.streaming.{ImplicitGroupingKeyTracker, StatefulProcessorHandleImpl, StatefulProcessorHandleState}
-import org.apache.spark.sql.execution.streaming.state.StateMessage.{ExpiryTimerInfoRequest, HandleState, ImplicitGroupingKeyRequest, ListStateCall, StatefulProcessorCall, StateRequest, StateResponse, StateVariableRequest, TimerRequest, TimerStateCallCommand, TimerValueRequest, ValueStateCall}
+import org.apache.spark.sql.execution.streaming.state.StateMessage.{HandleState, ImplicitGroupingKeyRequest, ListStateCall, StatefulProcessorCall, StateRequest, StateResponse, StateVariableRequest, TimerRequest, TimerStateCallCommand, TimerValueRequest, ValueStateCall}
 import org.apache.spark.sql.streaming.{ListState, ValueState}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.ArrowUtils
@@ -63,8 +63,7 @@ class TransformWithStateInPandasStateServer(
       ExpressionEncoder.Deserializer[Row], ExpressionEncoder.Serializer[Row])] = null,
     listStateIteratorMapForTest: mutable.HashMap[String, Iterator[Row]] = null,
     batchTimestampMs: Option[Long] = None,
-    eventTimeWatermarkForEviction: Option[Long] = None,
-    expiryTimestampMs: Option[Long] = None)
+    eventTimeWatermarkForEviction: Option[Long] = None)
   extends Runnable with Logging {
   private val keyRowDeserializer: ExpressionEncoder.Deserializer[Row] =
     ExpressionEncoder(groupingKeySchema).resolveAndBind().createDeserializer()
@@ -169,20 +168,6 @@ class TransformWithStateInPandasStateServer(
             throw new IllegalArgumentException("Invalid timer value method call")
         }
 
-      case TimerRequest.MethodCase.EXPIRYTIMERINFOREQUEST =>
-        val expiryTimerInfoRequest = message.getExpiryTimerInfoRequest()
-        expiryTimerInfoRequest.getMethodCase match {
-          case ExpiryTimerInfoRequest.MethodCase.ISVALID =>
-            val valueStr = expiryTimestampMs.isDefined.toString()
-            sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
-          case ExpiryTimerInfoRequest.MethodCase.GETEXPIRYTIME =>
-            val valueStr =
-              if (expiryTimestampMs.isDefined) expiryTimestampMs.get.toString else "-1"
-            sendResponse(0, null, ByteString.copyFromUtf8(valueStr))
-          case _ =>
-            throw new IllegalArgumentException("Invalid expiry timer info method call")
-        }
-
       case _ =>
 
         throw new IllegalArgumentException("Invalid timer request method call")
@@ -217,6 +202,12 @@ class TransformWithStateInPandasStateServer(
             statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.CREATED)
           case HandleState.INITIALIZED =>
             logInfo(log"set handle state to Initialized")
+            statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.INITIALIZED)
+          case HandleState.DATA_PROCESSED =>
+            logInfo(log"set handle state to Data Processed")
+            statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.INITIALIZED)
+          case HandleState.TIMER_PROCESSED =>
+            logInfo(log"set handle state to Timer Processed")
             statefulProcessorHandle.setHandleState(StatefulProcessorHandleState.INITIALIZED)
           case HandleState.CLOSED =>
             logInfo(log"set handle state to Closed")

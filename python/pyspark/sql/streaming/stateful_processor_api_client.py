@@ -33,7 +33,8 @@ class StatefulProcessorHandleState(Enum):
     CREATED = 1
     INITIALIZED = 2
     DATA_PROCESSED = 3
-    CLOSED = 4
+    TIMER_PROCESSED = 4
+    CLOSED = 5
 
 
 class StatefulProcessorApiClient:
@@ -58,6 +59,8 @@ class StatefulProcessorApiClient:
             proto_state = stateMessage.INITIALIZED
         elif state == StatefulProcessorHandleState.DATA_PROCESSED:
             proto_state = stateMessage.DATA_PROCESSED
+        elif state == StatefulProcessorHandleState.TIMER_PROCESSED:
+            proto_state = stateMessage.TIMER_PROCESSED
         else:
             proto_state = stateMessage.CLOSED
         set_handle_state = stateMessage.SetHandleState(state=proto_state)
@@ -193,6 +196,52 @@ class StatefulProcessorApiClient:
     def list_timers(self) -> None:
         # TODO figure out how to get data
         ...
+
+    def get_expiry_timers(self) -> list[(any, int)]:
+        # TODO figure out how to get data
+        return []
+
+    def get_batch_timestamp(self) -> int:
+        import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
+
+        get_processing_time_call = stateMessage.GetProcessingTime()
+        timer_value_call = stateMessage.TimerValueRequest(getProcessingTimer=get_processing_time_call)
+        timer_request = stateMessage.TimerRequest(timerValueRequest=timer_value_call)
+        message = stateMessage.StateRequest(timerRequest=timer_request)
+
+        self._send_proto_message(message.SerializeToString())
+        response_message = self._receive_proto_message()
+        status = response_message[0]
+        if status != 0:
+            # TODO(SPARK-49233): Classify user facing errors.
+            raise PySparkRuntimeError(f"Error getting processing timestamp: " f"{response_message[1]}")
+        else:
+            if len(response_message[2]) == 0:
+                return -1
+            # TODO: can we simply parse from utf8 string here?
+            timestamp = int(response_message[2])
+            return timestamp
+
+    def get_watermark_timestamp(self) -> int:
+        import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
+
+        get_watermark_call = stateMessage.GetWatermark()
+        timer_value_call = stateMessage.TimerValueRequest(getWatermark=get_watermark_call)
+        timer_request = stateMessage.TimerRequest(timerValueRequest=timer_value_call)
+        message = stateMessage.StateRequest(timerRequest=timer_request)
+
+        self._send_proto_message(message.SerializeToString())
+        response_message = self._receive_proto_message()
+        status = response_message[0]
+        if status != 0:
+            # TODO(SPARK-49233): Classify user facing errors.
+            raise PySparkRuntimeError(f"Error getting processing timestamp: " f"{response_message[1]}")
+        else:
+            if len(response_message[2]) == 0:
+                return -1
+            # TODO: can we simply parse from utf8 string here?
+            timestamp = int(response_message[2])
+            return timestamp
 
     def _send_proto_message(self, message: bytes) -> None:
         # Writing zero here to indicate message version. This allows us to evolve the message

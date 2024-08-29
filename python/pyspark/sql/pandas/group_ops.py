@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import itertools
 import sys
 from typing import Any, Iterator, List, Union, TYPE_CHECKING, cast
 import warnings
@@ -507,10 +508,35 @@ class PandasGroupedOpsMixin:
                 )
             statefulProcessorApiClient.set_implicit_key(key)
 
-            result = statefulProcessor.handleInputRows(
-                key, inputRows,
-                TimerValues(statefulProcessorApiClient),
-                ExpiredTimerInfo(statefulProcessorApiClient))
+            # process with empty timer value first
+            data_iter = statefulProcessor.handleInputRows(
+                key, inputRows, TimerValues(), ExpiredTimerInfo(False))
+            statefulProcessorApiClient.set_handle_state(
+                StatefulProcessorHandleState.DATA_PROCESSED
+            )
+
+            batch_timestamp = -1
+            watermark_timestamp = -1
+            if timeMode == "processingtime":
+                batch_timestamp = statefulProcessorApiClient.get_batch_timestamp()
+            elif timeMode == "eventtime":
+                watermark_timestamp = statefulProcessorApiClient.get_watermark_timestamp()
+
+            expiry_list: list[(any, int)] = statefulProcessorApiClient.get_expiry_timers()
+            timer_iter = iter([])
+            for ele in expiry_list:
+                key_obj, expiry_timestamp = ele
+                timer_iter = itertools.chain(
+                    timer_iter, statefulProcessor.handleInputRows(
+                        key_obj, iter([]),
+                        TimerValues(batch_timestamp, watermark_timestamp),
+                        ExpiredTimerInfo(True, expiry_timestamp)))
+
+            statefulProcessorApiClient.set_handle_state(
+                StatefulProcessorHandleState.TIMER_PROCESSED
+            )
+
+            result = itertools.chain(data_iter, timer_iter)
 
             return result
 
