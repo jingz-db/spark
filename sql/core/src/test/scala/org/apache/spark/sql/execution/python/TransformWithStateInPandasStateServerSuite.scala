@@ -31,13 +31,8 @@ import org.apache.spark.sql.{Encoder, Row}
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.execution.streaming.{StatefulProcessorHandleImpl, StatefulProcessorHandleState}
-<<<<<<< HEAD
-import org.apache.spark.sql.execution.streaming.state.StateMessage.{AppendList, AppendValue, Clear, Exists, Get, HandleState, ListStateCall, ListStatePut, SetHandleState, StateCallCommand, StatefulProcessorCall, ValueStateCall, ValueStateUpdate}
+import org.apache.spark.sql.execution.streaming.state.StateMessage.{AppendList, AppendValue, Clear, DeleteTimers, Exists, ExpiryTimerRequest, Get, HandleState, ListStateCall, ListStatePut, SetHandleState, StateCallCommand, StatefulProcessorCall, TimerRequest, TimerStateCallCommand, TimerValueRequest, ValueStateCall, ValueStateUpdate}
 import org.apache.spark.sql.streaming.{ListState, ValueState}
-=======
-import org.apache.spark.sql.execution.streaming.state.StateMessage.{Clear, DeleteTimers, Exists, ExpiryTimerInfoRequest, Get, GetExpiryTime, GetProcessingTime, GetWatermark, HandleState, IsValid, ListTimers, RegisterTimer, SetHandleState, StateCallCommand, StatefulProcessorCall, TimerRequest, TimerStateCallCommand, TimerValueRequest, ValueStateCall, ValueStateUpdate}
-import org.apache.spark.sql.streaming.ValueState
->>>>>>> e67d3dff3f (add unit tests)
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
 class TransformWithStateInPandasStateServerSuite extends SparkFunSuite with BeforeAndAfterEach {
@@ -57,7 +52,6 @@ class TransformWithStateInPandasStateServerSuite extends SparkFunSuite with Befo
   var valueState: ValueState[Row] = _
   var listState: ListState[Row] = _
   var stateServer: TransformWithStateInPandasStateServer = _
-<<<<<<< HEAD
   var stateDeserializer: ExpressionEncoder.Deserializer[Row] = _
   var stateSerializer: ExpressionEncoder.Serializer[Row] = _
   var transformWithStateInPandasDeserializer: TransformWithStateInPandasDeserializer = _
@@ -67,19 +61,16 @@ class TransformWithStateInPandasStateServerSuite extends SparkFunSuite with Befo
   var listStateMap: mutable.HashMap[String,
       (ListState[Row], StructType, ExpressionEncoder.Deserializer[Row],
         ExpressionEncoder.Serializer[Row])] = mutable.HashMap()
-=======
   var valueSchema: StructType = _
   var valueDeserializer: ExpressionEncoder.Deserializer[Row] = _
   var batchTimestampMs: Option[Long] = _
   var eventTimeWatermarkForEviction: Option[Long] = _
   var expiryTimestampMs: Option[Long] = _
->>>>>>> e67d3dff3f (add unit tests)
 
   override def beforeEach(): Unit = {
     statefulProcessorHandle = mock(classOf[StatefulProcessorHandleImpl])
     outputStream = mock(classOf[DataOutputStream])
     valueState = mock(classOf[ValueState[Row]])
-<<<<<<< HEAD
     listState = mock(classOf[ListState[Row]])
     stateDeserializer = ExpressionEncoder(stateSchema).resolveAndBind().createDeserializer()
     stateSerializer = ExpressionEncoder(stateSchema).resolveAndBind().createSerializer()
@@ -97,22 +88,9 @@ class TransformWithStateInPandasStateServerSuite extends SparkFunSuite with Befo
     stateServer = new TransformWithStateInPandasStateServer(serverSocket,
       statefulProcessorHandle, groupingKeySchema, "", false, false, 2,
       outputStream, valueStateMap, transformWithStateInPandasDeserializer, arrowStreamWriter,
-      listStateMap, listStateIteratorMap)
+      listStateMap, listStateIteratorMap, batchTimestampMs, eventTimeWatermarkForEviction)
     when(transformWithStateInPandasDeserializer.readArrowBatches(any))
       .thenReturn(Seq(new GenericRowWithSchema(Array(1), stateSchema)))
-=======
-    valueSchema = StructType(Array(StructField("value", IntegerType)))
-    valueDeserializer = ExpressionEncoder(valueSchema).resolveAndBind().createDeserializer()
-    batchTimestampMs = mock(classOf[Option[Long]])
-    eventTimeWatermarkForEviction = mock(classOf[Option[Long]])
-    expiryTimestampMs = mock(classOf[Option[Long]])
-    val valueStateMap = mutable.HashMap[String,
-      (ValueState[Row], StructType, ExpressionEncoder.Deserializer[Row])](valueStateName ->
-      (valueState, valueSchema, valueDeserializer))
-    stateServer = new TransformWithStateInPandasStateServer(serverSocket,
-      statefulProcessorHandle, groupingKeySchema, outputStream, valueStateMap,
-      batchTimestampMs, eventTimeWatermarkForEviction, expiryTimestampMs)
->>>>>>> e67d3dff3f (add unit tests)
   }
 
   test("set handle state") {
@@ -262,26 +240,15 @@ class TransformWithStateInPandasStateServerSuite extends SparkFunSuite with Befo
     verify(outputStream).writeInt(argThat((x: Int) => x > 0))
   }
 
-  test("expiry timer info test is valid") {
-    val message = TimerRequest.newBuilder().setExpiryTimerInfoRequest(
-      ExpiryTimerInfoRequest.newBuilder().setIsValid(
-        IsValid.newBuilder().build()
+  test("get expiry timers") {
+    val message = TimerRequest.newBuilder().setExpiryTimerRequest(
+      ExpiryTimerRequest.newBuilder().setExpiryTimestampMs(
+        10L
       ).build()
     ).build()
     stateServer.handleTimerRequest(message)
-    verify(expiryTimestampMs).isDefined
-    verify(outputStream).writeInt(argThat((x: Int) => x > 0))
-  }
-
-  test("expiry timer info get expiry time") {
-    val message = TimerRequest.newBuilder().setExpiryTimerInfoRequest(
-      ExpiryTimerInfoRequest.newBuilder().setGetExpiryTime(
-        GetExpiryTime.newBuilder().build()
-      ).build()
-    ).build()
-    stateServer.handleTimerRequest(message)
-    verify(expiryTimestampMs).isDefined
-    verify(outputStream).writeInt(argThat((x: Int) => x > 0))
+    verify(statefulProcessorHandle).getExpiredTimers(any[Long])
+    verify(outputStream).writeInt(0)
   }
 
   test("stateful processor register timer") {

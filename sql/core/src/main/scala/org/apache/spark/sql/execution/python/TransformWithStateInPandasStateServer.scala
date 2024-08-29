@@ -172,11 +172,14 @@ class TransformWithStateInPandasStateServer(
         val expiryRequest = message.getExpiryTimerRequest()
         val expiryTimestamp = expiryRequest.getExpiryTimestampMs
         val iter = statefulProcessorHandle.getExpiredTimers(expiryTimestamp)
-        var responseStr: String = ""
-        iter.foreach { p =>
-          responseStr = responseStr + s"(${p._1},${p._2});"
+        if (iter == null) {
+          sendResponse(0, null, ByteString.copyFromUtf8(""))
+        } else {
+          var responseStr: String = ""
+          iter.foreach { p =>
+            responseStr = responseStr + s"(${p._1},${p._2});"
+          }
         }
-        sendResponse(0, null, ByteString.copyFromUtf8(responseStr))
 
       case _ =>
 
@@ -248,11 +251,17 @@ class TransformWithStateInPandasStateServer(
           case TimerStateCallCommand.MethodCase.LIST =>
             // TODO how to send list timer result
             val timestampIter = statefulProcessorHandle.listTimers()
-            var responseStr: String = ""
-            timestampIter.foreach { timestamp =>
-              responseStr = responseStr + s"$timestamp,"
+            if (timestampIter == null) {
+              sendResponse(0, null, ByteString.copyFromUtf8(""))
+            } else {
+              var responseStr: String = ""
+              println("I am after listTimers, iter here: " + timestampIter.toString())
+              timestampIter.foreach { timestamp =>
+                responseStr = responseStr + s"$timestamp,"
+              }
+              sendResponse(0, null, ByteString.copyFromUtf8(responseStr))
             }
-            sendResponse(0, null, ByteString.copyFromUtf8(responseStr))
+
           case _ =>
             throw new IllegalArgumentException("Invalid timer state method call")
         }
