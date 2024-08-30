@@ -177,7 +177,7 @@ class TransformWithStateInPandasStateServer(
         } else {
           var responseStr: String = ""
           iter.foreach { p =>
-            responseStr = responseStr + s"(${p._1},${p._2});"
+            responseStr = responseStr + s"${p._1},${p._2};"
           }
           sendResponse(0, null, ByteString.copyFromUtf8(responseStr))
         }

@@ -166,10 +166,10 @@ class StatefulProcessorApiClient:
     def register_timer(self, expiry_time_stamp_ms: int) -> None:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
 
-        state_call_command = stateMessage.TimerStateCallCommand()
-        state_call_command.register = stateMessage.RegisterTimer(expiryTimestampMs=expiry_time_stamp_ms)
+        register_call = stateMessage.RegisterTimer(expiryTimestampMs=expiry_time_stamp_ms)
+        state_call_command = stateMessage.TimerStateCallCommand(register=register_call)
         call = stateMessage.StatefulProcessorCall(timerStateCall=state_call_command)
-        message = stateMessage.StateRequest(StatefulProcessorCall=call)
+        message = stateMessage.StateRequest(statefulProcessorCall=call)
 
         self._send_proto_message(message.SerializeToString())
         response_message = self._receive_proto_message()
@@ -181,10 +181,10 @@ class StatefulProcessorApiClient:
     def delete_timers(self, expiry_time_stamp_ms: int) -> None:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
 
-        state_call_command = stateMessage.TimerStateCallCommand()
-        state_call_command.delete = stateMessage.DeleteTimers(expiryTimestampMs=expiry_time_stamp_ms)
+        delete_call = stateMessage.DeleteTimers(expiryTimestampMs=expiry_time_stamp_ms)
+        state_call_command = stateMessage.TimerStateCallCommand(delete=delete_call)
         call = stateMessage.StatefulProcessorCall(timerStateCall=state_call_command)
-        message = stateMessage.StateRequest(StatefulProcessorCall=call)
+        message = stateMessage.StateRequest(statefulProcessorCall=call)
 
         self._send_proto_message(message.SerializeToString())
         response_message = self._receive_proto_message()
@@ -196,10 +196,10 @@ class StatefulProcessorApiClient:
     def list_timers(self) -> list[int]:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
 
-        state_call_command = stateMessage.TimerStateCallCommand()
-        state_call_command.list = stateMessage.ListTimers()
+        list_call = stateMessage.ListTimers()
+        state_call_command = stateMessage.TimerStateCallCommand(list=list_call)
         call = stateMessage.StatefulProcessorCall(timerStateCall=state_call_command)
-        message = stateMessage.StateRequest(StatefulProcessorCall=call)
+        message = stateMessage.StateRequest(statefulProcessorCall=call)
 
         self._send_proto_message(message.SerializeToString())
         response_message = self._receive_proto_message()
@@ -231,7 +231,7 @@ class StatefulProcessorApiClient:
             if len(response_message[2]) == 0:
                 return []
             # TODO: use arrow
-            pair_list = [element for element in str(response_message[2]).split(";") if element]
+            pair_list = [element for element in str(response_message[2]).split(";") if "," in element]
             timestamp_list: list[(any, int)] = [(s.split(',')[0], int(s.split(',')[1])) for s in pair_list]
             return timestamp_list
 

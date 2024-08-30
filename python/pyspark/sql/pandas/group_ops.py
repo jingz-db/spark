@@ -522,6 +522,7 @@ class PandasGroupedOpsMixin:
             elif timeMode == "eventtime":
                 expiry_list: list[(any, int)] = statefulProcessorApiClient.get_expiry_timers(watermark_timestamp)
 
+            """
             timer_iter = iter([])
             for ele in expiry_list:
                 key_obj, expiry_timestamp = ele
@@ -531,13 +532,17 @@ class PandasGroupedOpsMixin:
                         TimerValues(batch_timestamp, watermark_timestamp),
                         ExpiredTimerInfo(True, expiry_timestamp)))
 
+            # TODO fix this, why status is timer_processed?
+            
             statefulProcessorApiClient.set_handle_state(
                 StatefulProcessorHandleState.TIMER_PROCESSED
             )
+            
 
             result = itertools.chain(data_iter, timer_iter)
+            """
 
-            return result
+            return data_iter
 
         if isinstance(outputStructType, str):
             outputStructType = cast(StructType, _parse_datatype_string(outputStructType))

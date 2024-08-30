@@ -17,6 +17,7 @@
 
 import os
 import tempfile
+import time
 from pyspark.sql.streaming import StatefulProcessor, StatefulProcessorHandle
 from typing import Iterator
 
@@ -212,6 +213,17 @@ class TransformWithStateInPandasTestsMixin:
             Row(id="1", countAsString="2"),
             Row(id="1", countAsString="2"),
         }
+        
+    def test_transform_with_state_in_pandas_list_state(self):
+        def check_results(batch_df, _):
+            assert set(batch_df.sort("id").collect()) == {
+                Row(id="0", countAsString="2"),
+                Row(id="1", countAsString="2"),
+            }
+
+        self._test_transform_with_state_in_pandas_basic(
+            ListStateProcessor(), check_results, True
+        )    
     """
 
     def _test_transform_with_state_in_pandas_proc_timer(
@@ -231,6 +243,7 @@ class TransformWithStateInPandasTestsMixin:
             [
                 StructField("id", StringType(), True),
                 StructField("countAsString", StringType(), True),
+                StructField("timeValues", StringType(), True)
             ]
         )
 
@@ -270,16 +283,44 @@ class TransformWithStateInPandasTestsMixin:
 
         self._test_transform_with_state_in_pandas_proc_timer(ProcTimeStatefulProcessor(), check_results)
 
-    def test_transform_with_state_in_pandas_list_state(self):
-        def check_results(batch_df, _):
-            assert set(batch_df.sort("id").collect()) == {
-                Row(id="0", countAsString="2"),
-                Row(id="1", countAsString="2"),
-            }
 
-        self._test_transform_with_state_in_pandas_basic(
-            ListStateProcessor(), check_results, True
-        )
+class ProcTimeStatefulProcessor(StatefulProcessor):
+
+    def init(self, handle: StatefulProcessorHandle) -> None:
+        state_schema = StructType([StructField("value", StringType(), True)])
+        self.handle = handle
+        self.count_state = handle.getValueState("count_state", state_schema)
+
+    def handleInputRows(self, key, rows, timer_values, expired_timer_info) -> Iterator[pd.DataFrame]:
+        if expired_timer_info.is_valid():
+            self.count_state.clear()
+            yield pd.DataFrame({"id": key, "countAsString": str("-1"),
+                                "timeValues": str(expired_timer_info.get_expiry_time_in_ms())})
+
+        else:
+            if not self.count_state.exists():
+                count = 0
+            else:
+                count = int(self.count_state.get()[0])
+
+            self.handle.registerTimer(int(time.time() * 1000))
+            self.handle.deleteTimers(int(time.time() * 1000))
+
+            rows_count = 0
+            for pdf in rows:
+                pdf_count = len(pdf)
+                rows_count += pdf_count
+
+            count = count + rows_count
+
+            self.count_state.update(str(count))
+            timestamp = str(timer_values.get_current_processing_time_in_ms())
+
+            yield pd.DataFrame({"id": key, "countAsString": str(count),
+                                "timeValues": timestamp})
+
+    def close(self) -> None:
+        pass
 
 
 class SimpleStatefulProcessor(StatefulProcessor):
