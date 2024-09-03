@@ -204,17 +204,22 @@ class StatefulProcessorApiClient:
         self._send_proto_message(message.SerializeToString())
         response_message = self._receive_proto_message()
         status = response_message[0]
-        if status != 0:
-            # TODO(SPARK-49233): Classify user facing errors.
-            raise PySparkRuntimeError(f"Error getting list timers: " f"{response_message[1]}")
+        if status == 1:
+            return []
+        elif status == 0:
+            iterator = self._read_arrow_state()
+            batch = next(iterator)
+            result_list = []
+            batch_df = batch.to_pandas()
+            for i in range(batch.num_rows):
+                timestamp = batch_df.at[i, 'timestamp'].item()
+                result_list.append(timestamp)
+            return result_list
         else:
-            if len(response_message[2]) == 0:
-                return []
-            # TODO: use arrow
-            timestamp_list = [int(element) for element in str(response_message[2]).split(",") if element]
-            return timestamp_list
+            # TODO(SPARK-49233): Classify user facing errors.
+            raise PySparkRuntimeError(f"Error getting expiry timers: " f"{response_message[1]}")
 
-    def get_expiry_timers(self, expiry_timestamp: int) -> list[(any, int)]:
+    def get_expiry_timers(self, expiry_timestamp: int) -> list[Any, int]:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
 
         expiry_timer_call = stateMessage.ExpiryTimerRequest(expiryTimestampMs=expiry_timestamp)
@@ -224,16 +229,23 @@ class StatefulProcessorApiClient:
         self._send_proto_message(message.SerializeToString())
         response_message = self._receive_proto_message()
         status = response_message[0]
-        if status != 0:
+        if status == 1:
+            return []
+        elif status == 0:
+            iterator = self._read_arrow_state()
+            batch = next(iterator)
+            result_list = []
+            key_fields = [field.name for field in self.key_schema.fields]
+            # TODO any better way to restore a grouping object from a batch?
+            batch_df = batch.to_pandas()
+            for i in range(batch.num_rows):
+                key = batch_df.at[i, 'key'].get(key_fields[0])
+                timestamp = batch_df.at[i, 'timestamp'].item()
+                result_list.append((key, timestamp))
+            return result_list
+        else:
             # TODO(SPARK-49233): Classify user facing errors.
             raise PySparkRuntimeError(f"Error getting expiry timers: " f"{response_message[1]}")
-        else:
-            if len(response_message[2]) == 0:
-                return []
-            # TODO: use arrow
-            pair_list = [element for element in str(response_message[2]).split(";") if "," in element]
-            timestamp_list: list[(any, int)] = [(s.split(',')[0], int(s.split(',')[1])) for s in pair_list]
-            return timestamp_list
 
     def get_batch_timestamp(self) -> int:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage

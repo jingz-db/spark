@@ -184,4 +184,30 @@ class TimerStateImpl(
       override protected def close(): Unit = { }
     }
   }
+
+  def getExpiredTimersWithKeyRow(expiryTimestampMs: Long): Iterator[(UnsafeRow, Long)] = {
+    // this iter is increasingly sorted on timestamp
+    val iter = store.iterator(tsToKeyCFName)
+
+    new NextIterator[(UnsafeRow, Long)] {
+      override protected def getNext(): (UnsafeRow, Long) = {
+        if (iter.hasNext) {
+          val rowPair = iter.next()
+          val keyRow = rowPair.key
+          val result = getTimerRowFromSecIndex(keyRow)
+          if (result._2 < expiryTimestampMs) {
+            (keyRow.getStruct(1, keyExprEnc.schema.length), result._2)
+          } else {
+            finished = true
+            null.asInstanceOf[(UnsafeRow, Long)]
+          }
+        } else {
+          finished = true
+          null.asInstanceOf[(UnsafeRow, Long)]
+        }
+      }
+
+      override protected def close(): Unit = {}
+    }
+  }
 }

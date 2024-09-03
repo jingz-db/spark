@@ -242,8 +242,7 @@ class TransformWithStateInPandasTestsMixin:
         output_schema = StructType(
             [
                 StructField("id", StringType(), True),
-                StructField("countAsString", StringType(), True),
-                StructField("timeValues", StringType(), True)
+                StructField("countAsString", StringType(), True)
             ]
         )
 
@@ -277,6 +276,7 @@ class TransformWithStateInPandasTestsMixin:
                     Row(id="1", countAsString="2"),
                 }
             else:
+                raise Exception(f"I am here inside batch {batch_id}, batch content: {batch_df.show()}")
                 assert set(batch_df.sort("id").select("id", "countAsString").collect()) == {
                     Row(id="0", countAsString="5"),
                     Row(id="1", countAsString="4"),
@@ -315,10 +315,8 @@ class ProcTimeStatefulProcessor(StatefulProcessor):
             count = count + rows_count
 
             self.count_state.update(str(count))
-            timestamp = str(timer_values.get_current_processing_time_in_ms())
 
-            yield pd.DataFrame({"id": key, "countAsString": str(count),
-                                "timeValues": timestamp})
+            yield pd.DataFrame({"id": key, "countAsString": str(count)})
 
     def close(self) -> None:
         pass

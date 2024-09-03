@@ -29,11 +29,12 @@ import org.apache.arrow.vector.ipc.ArrowStreamWriter
 import org.apache.spark.internal.{Logging, LogKeys, MDC}
 import org.apache.spark.sql.{Encoders, Row}
 import org.apache.spark.sql.api.python.PythonSQLUtils
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.execution.streaming.{ImplicitGroupingKeyTracker, StatefulProcessorHandleImpl, StatefulProcessorHandleState}
 import org.apache.spark.sql.execution.streaming.state.StateMessage.{HandleState, ImplicitGroupingKeyRequest, ListStateCall, StatefulProcessorCall, StateRequest, StateResponse, StateVariableRequest, TimerRequest, TimerStateCallCommand, TimerValueRequest, ValueStateCall}
 import org.apache.spark.sql.streaming.{ListState, ValueState}
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.util.ArrowUtils
 
 /**
@@ -168,18 +169,33 @@ class TransformWithStateInPandasStateServer(
         }
 
       case TimerRequest.MethodCase.EXPIRYTIMERREQUEST =>
-        // TODO how to send list value
         val expiryRequest = message.getExpiryTimerRequest()
         val expiryTimestamp = expiryRequest.getExpiryTimestampMs
-        val iter = statefulProcessorHandle.getExpiredTimers(expiryTimestamp)
-        if (iter == null) {
-          sendResponse(0, null, ByteString.copyFromUtf8(""))
+        val iter = statefulProcessorHandle.getExpiredTimersWithKeyRow(expiryTimestamp)
+        if (iter == null || !iter.hasNext) {
+          // avoid sending over empty batch
+          sendResponse(1)
         } else {
-          var responseStr: String = ""
-          iter.foreach { p =>
-            responseStr = responseStr + s"${p._1},${p._2};"
+          sendResponse(0)
+          outputStream.flush()
+          val arrowStreamWriter = {
+            val outputSchema = new StructType()
+              .add("key", groupingKeySchema)
+              .add(StructField("timestamp", LongType))
+            val arrowSchema = ArrowUtils.toArrowSchema(outputSchema, timeZoneId,
+              errorOnDuplicatedFieldNames, largeVarTypes)
+            val allocator = ArrowUtils.rootAllocator.newChildAllocator(
+              s"stdout writer for transformWithStateInPandas state socket", 0, Long.MaxValue)
+            val root = VectorSchemaRoot.create(arrowSchema, allocator)
+            new BaseStreamingArrowWriter(root, new ArrowStreamWriter(root, null, outputStream),
+              arrowTransformWithStateInPandasMaxRecordsPerBatch)
           }
-          sendResponse(0, null, ByteString.copyFromUtf8(responseStr))
+          while (iter.hasNext) {
+            val (key, timestamp) = iter.next()
+            val internalRow = InternalRow(key, timestamp)
+            arrowStreamWriter.writeRow(internalRow)
+          }
+          arrowStreamWriter.finalizeCurrentArrowBatch()
         }
 
       case _ =>
@@ -250,17 +266,31 @@ class TransformWithStateInPandasStateServer(
             statefulProcessorHandle.deleteTimer(expiryTimestamp)
             sendResponse(0)
           case TimerStateCallCommand.MethodCase.LIST =>
-            // TODO how to send list timer result
-            val timestampIter = statefulProcessorHandle.listTimers()
-            if (timestampIter == null) {
-              sendResponse(0, null, ByteString.copyFromUtf8(""))
+            val iter = statefulProcessorHandle.listTimers()
+
+            if (iter == null || !iter.hasNext) {
+              // avoid sending over empty batch
+              sendResponse(1)
             } else {
-              var responseStr: String = ""
-              println("I am after listTimers, iter here: " + timestampIter.toString())
-              timestampIter.foreach { timestamp =>
-                responseStr = responseStr + s"$timestamp,"
+              sendResponse(0)
+              outputStream.flush()
+              val arrowStreamWriter = {
+                val outputSchema = new StructType()
+                  .add(StructField("timestamp", LongType))
+                val arrowSchema = ArrowUtils.toArrowSchema(outputSchema, timeZoneId,
+                  errorOnDuplicatedFieldNames, largeVarTypes)
+                val allocator = ArrowUtils.rootAllocator.newChildAllocator(
+                  s"stdout writer for transformWithStateInPandas state socket", 0, Long.MaxValue)
+                val root = VectorSchemaRoot.create(arrowSchema, allocator)
+                new BaseStreamingArrowWriter(root, new ArrowStreamWriter(root, null, outputStream),
+                  arrowTransformWithStateInPandasMaxRecordsPerBatch)
               }
-              sendResponse(0, null, ByteString.copyFromUtf8(responseStr))
+              while (iter.hasNext) {
+                val timestamp = iter.next()
+                val internalRow = InternalRow(timestamp)
+                arrowStreamWriter.writeRow(internalRow)
+              }
+              arrowStreamWriter.finalizeCurrentArrowBatch()
             }
 
           case _ =>

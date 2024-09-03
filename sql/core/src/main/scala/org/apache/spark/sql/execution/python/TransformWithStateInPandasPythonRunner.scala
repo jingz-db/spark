@@ -57,8 +57,6 @@ class TransformWithStateInPandasPythonRunner(
   with PythonArrowInput[InType]
   with BasicPythonArrowOutput
   with Logging {
-  val m = s"evalType: $evalType, _schema: ${_schema}, groupingKeySchema: $groupingKeySchema"
-  // throw new Exception("Inside TransformWithStateInPandasPythonRunner: " + m)
 
   private val sqlConf = SQLConf.get
   private val arrowMaxRecordsPerBatch = sqlConf.arrowMaxRecordsPerBatch
