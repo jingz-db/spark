@@ -522,13 +522,26 @@ class PandasGroupedOpsMixin:
             elif timeMode == "eventtime":
                 expiry_list: list[(any, int)] = statefulProcessorApiClient.get_expiry_timers(watermark_timestamp)
 
-            timer_iter = iter([])
+            result_iter_list = []
+            # process with valid expiry time info and with empty input rows,
+            # only timer related rows will be emitted
             for key_obj, expiry_timestamp in expiry_list:
-                timer_iter = itertools.chain(
-                    timer_iter, statefulProcessor.handleInputRows(
+                if timeMode == "processingtime" and expiry_timestamp < batch_timestamp:
+                    statefulProcessorApiClient.set_implicit_key(key)
+                    result_iter_list.append(statefulProcessor.handleInputRows(
                         (key_obj,), iter([]),
                         TimerValues(batch_timestamp, watermark_timestamp),
                         ExpiredTimerInfo(True, expiry_timestamp)))
+                    handle.deleteTimer(expiry_timestamp)
+                    # statefulProcessorApiClient.remove_implicit_key()
+                elif timeMode == "eventtime" and expiry_timestamp < watermark_timestamp:
+                    statefulProcessorApiClient.set_implicit_key(key)
+                    result_iter_list.append(statefulProcessor.handleInputRows(
+                        (key_obj,), iter([]),
+                        TimerValues(batch_timestamp, watermark_timestamp),
+                        ExpiredTimerInfo(True, expiry_timestamp)))
+                    handle.deleteTimer(expiry_timestamp)
+                    # statefulProcessorApiClient.remove_implicit_key()
 
             # TODO fix this, why status is timer_processed before go into handle timer?
             """
@@ -537,7 +550,8 @@ class PandasGroupedOpsMixin:
             )
             """
 
-            result = itertools.chain(data_iter, timer_iter)
+            result_iter_list.insert(0, data_iter)
+            result = itertools.chain(*result_iter_list)
 
             return result
 

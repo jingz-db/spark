@@ -178,10 +178,10 @@ class StatefulProcessorApiClient:
             # TODO(SPARK-49233): Classify user facing errors.
             raise PySparkRuntimeError(f"Error register timer: " f"{response_message[1]}")
 
-    def delete_timers(self, expiry_time_stamp_ms: int) -> None:
+    def delete_timer(self, expiry_time_stamp_ms: int) -> None:
         import pyspark.sql.streaming.StateMessage_pb2 as stateMessage
 
-        delete_call = stateMessage.DeleteTimers(expiryTimestampMs=expiry_time_stamp_ms)
+        delete_call = stateMessage.DeleteTimer(expiryTimestampMs=expiry_time_stamp_ms)
         state_call_command = stateMessage.TimerStateCallCommand(delete=delete_call)
         call = stateMessage.StatefulProcessorCall(timerStateCall=state_call_command)
         message = stateMessage.StateRequest(statefulProcessorCall=call)

@@ -270,14 +270,13 @@ class TransformWithStateInPandasTestsMixin:
     def test_transform_with_state_in_pandas_proc_timer(self):
         def check_results(batch_df, batch_id):
             if batch_id == 0:
-                # raise Exception(f"I am here inside batch {batch_id}, batch content: {batch_df.show()}")
-                assert set(batch_df.sort("id").select("id", "countAsString").collect()) == {
+                assert set(batch_df.sort("id").collect()) == {
                     Row(id="0", countAsString="2"),
                     Row(id="1", countAsString="2"),
                 }
             else:
                 raise Exception(f"I am here inside batch {batch_id}, batch content: {batch_df.show()}")
-                assert set(batch_df.sort("id").select("id", "countAsString").collect()) == {
+                assert set(batch_df.sort("id").collect()) == {
                     Row(id="0", countAsString="5"),
                     Row(id="1", countAsString="4"),
                 }
@@ -295,8 +294,8 @@ class ProcTimeStatefulProcessor(StatefulProcessor):
     def handleInputRows(self, key, rows, timer_values, expired_timer_info) -> Iterator[pd.DataFrame]:
         if expired_timer_info.is_valid():
             self.count_state.clear()
-            yield pd.DataFrame({"id": key, "countAsString": str("-1"),
-                                "timeValues": str(expired_timer_info.get_expiry_time_in_ms())})
+            self.handle.deleteTimer(expired_timer_info.get_expiry_time_in_ms())
+            yield pd.DataFrame({"id": key, "countAsString": str(expired_timer_info.get_expiry_time_in_ms())})
 
         else:
             if not self.count_state.exists():
@@ -304,8 +303,9 @@ class ProcTimeStatefulProcessor(StatefulProcessor):
             else:
                 count = int(self.count_state.get()[0])
 
-            self.handle.registerTimer(int(time.time() * 1000))
-            self.handle.deleteTimers(int(time.time() * 1000))
+            cur_time = int(time.time() * 1000)
+            if key == ('0',):
+                self.handle.registerTimer(cur_time)
 
             rows_count = 0
             for pdf in rows:

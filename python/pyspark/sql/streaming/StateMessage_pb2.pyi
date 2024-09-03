@@ -24,7 +24,7 @@ class Clear(_message.Message):
     __slots__ = []
     def __init__(self) -> None: ...
 
-class DeleteTimers(_message.Message):
+class DeleteTimer(_message.Message):
     __slots__ = ["expiryTimestampMs"]
     EXPIRYTIMESTAMPMS_FIELD_NUMBER: ClassVar[int]
     expiryTimestampMs: int
@@ -175,10 +175,10 @@ class TimerStateCallCommand(_message.Message):
     DELETE_FIELD_NUMBER: ClassVar[int]
     LIST_FIELD_NUMBER: ClassVar[int]
     REGISTER_FIELD_NUMBER: ClassVar[int]
-    delete: DeleteTimers
+    delete: DeleteTimer
     list: ListTimers
     register: RegisterTimer
-    def __init__(self, register: Optional[Union[RegisterTimer, Mapping]] = ..., delete: Optional[Union[DeleteTimers, Mapping]] = ..., list: Optional[Union[ListTimers, Mapping]] = ...) -> None: ...
+    def __init__(self, register: Optional[Union[RegisterTimer, Mapping]] = ..., delete: Optional[Union[DeleteTimer, Mapping]] = ..., list: Optional[Union[ListTimers, Mapping]] = ...) -> None: ...
 
 class TimerValueRequest(_message.Message):
     __slots__ = ["getProcessingTimer", "getWatermark"]

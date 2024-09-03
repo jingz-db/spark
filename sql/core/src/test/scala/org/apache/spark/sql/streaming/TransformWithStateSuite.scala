@@ -65,6 +65,39 @@ class RunningCountStatefulProcessor extends StatefulProcessor[String, String, (S
   }
 }
 
+class ProcTimerProcessor extends StatefulProcessor[String, String, (String, String)]
+  with Logging {
+  @transient protected var _countState: ValueState[Long] = _
+
+  override def init(
+                     outputMode: OutputMode,
+                     timeMode: TimeMode): Unit = {
+    _countState = getHandle.getValueState[Long]("countState", Encoders.scalaLong)
+  }
+
+  override def handleInputRows(
+                                key: String,
+                                inputRows: Iterator[String],
+                                timerValues: TimerValues,
+                                expiredTimerInfo: ExpiredTimerInfo): Iterator[(String, String)] = {
+    if (expiredTimerInfo.isValid()) {
+      println("I am here")
+      _countState.clear()
+      Iterator((key, "-1"))
+    } else {
+
+      if (key == "0") {
+        println("I am here registering")
+        getHandle.registerTimer(timerValues.getCurrentProcessingTimeInMs())
+      }
+
+      val count = _countState.getOption().getOrElse(0L) + 1
+      _countState.update(count)
+      Iterator((key, count.toString))
+    }
+  }
+}
+
 class RunningCountStatefulProcessorWithTTL
   extends StatefulProcessor[String, String, (String, String)]
   with Logging {
@@ -410,6 +443,35 @@ class TransformWithStateSuite extends StateStoreMetricsTest
   with AlsoTestWithChangelogCheckpointingEnabled {
 
   import testImplicits._
+
+  test("timer proc") {
+    withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->
+      classOf[RocksDBStateStoreProvider].getName) {
+      val clock = new StreamManualClock
+
+      val inputData = MemoryStream[String]
+      val result = inputData.toDS()
+        .groupByKey(x => x)
+        .transformWithState(new ProcTimerProcessor(),
+          TimeMode.ProcessingTime(),
+          OutputMode.Update())
+
+      testStream(result, OutputMode.Update())(
+        StartStream(Trigger.ProcessingTime("1 second"), triggerClock = clock),
+        AddData(inputData, "0"),
+        AddData(inputData, "1"),
+        AdvanceManualClock(1 * 1000),
+        CheckNewAnswer(("0", "1"), ("1", "1")),
+
+        AddData(inputData, "0"),
+        AddData(inputData, "1"),
+        AdvanceManualClock(1 * 1000),
+        CheckNewAnswer(("a", "1")),
+
+        StopStream
+      )
+    }
+  }
 
   test("transformWithState - streaming with rocksdb and invalid processor should fail") {
     withSQLConf(SQLConf.STATE_STORE_PROVIDER_CLASS.key ->

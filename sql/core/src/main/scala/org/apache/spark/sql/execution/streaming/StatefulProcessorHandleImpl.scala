@@ -181,6 +181,14 @@ class StatefulProcessorHandleImpl(
     timerState.getExpiredTimers(expiryTimestampMs)
   }
 
+  /**
+   * Function to retrieve all expired registered timers for all grouping keys.
+   * Returning key as UnsafeRow to avoid unnecessary (de)serialization for internal use.
+   *
+   * @param expiryTimestampMs Threshold for expired timestamp in milliseconds, this function
+   *                          will return all timers that have timestamp less than passed threshold
+   * @return - iterator of registered timers for all grouping keys
+   */
   def getExpiredTimersWithKeyRow(
       expiryTimestampMs: Long): Iterator[(UnsafeRow, Long)] = {
     verifyTimerOperations("get_expired_timers")

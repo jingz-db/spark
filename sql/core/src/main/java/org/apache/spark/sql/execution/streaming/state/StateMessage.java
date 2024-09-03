@@ -9569,19 +9569,19 @@ public final class StateMessage {
     org.apache.spark.sql.execution.streaming.state.StateMessage.RegisterTimerOrBuilder getRegisterOrBuilder();
 
     /**
-     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
      * @return Whether the delete field is set.
      */
     boolean hasDelete();
     /**
-     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
      * @return The delete.
      */
-    org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers getDelete();
+    org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer getDelete();
     /**
-     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
      */
-    org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimersOrBuilder getDeleteOrBuilder();
+    org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimerOrBuilder getDeleteOrBuilder();
 
     /**
      * <code>.org.apache.spark.sql.execution.streaming.state.ListTimers list = 3;</code>
@@ -9716,7 +9716,7 @@ public final class StateMessage {
 
     public static final int DELETE_FIELD_NUMBER = 2;
     /**
-     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
      * @return Whether the delete field is set.
      */
     @java.lang.Override
@@ -9724,25 +9724,25 @@ public final class StateMessage {
       return methodCase_ == 2;
     }
     /**
-     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
      * @return The delete.
      */
     @java.lang.Override
-    public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers getDelete() {
+    public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer getDelete() {
       if (methodCase_ == 2) {
-         return (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) method_;
+         return (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) method_;
       }
-      return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.getDefaultInstance();
+      return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.getDefaultInstance();
     }
     /**
-     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+     * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
      */
     @java.lang.Override
-    public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimersOrBuilder getDeleteOrBuilder() {
+    public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimerOrBuilder getDeleteOrBuilder() {
       if (methodCase_ == 2) {
-         return (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) method_;
+         return (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) method_;
       }
-      return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.getDefaultInstance();
+      return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.getDefaultInstance();
     }
 
     public static final int LIST_FIELD_NUMBER = 3;
@@ -9794,7 +9794,7 @@ public final class StateMessage {
         output.writeMessage(1, (org.apache.spark.sql.execution.streaming.state.StateMessage.RegisterTimer) method_);
       }
       if (methodCase_ == 2) {
-        output.writeMessage(2, (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) method_);
+        output.writeMessage(2, (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) method_);
       }
       if (methodCase_ == 3) {
         output.writeMessage(3, (org.apache.spark.sql.execution.streaming.state.StateMessage.ListTimers) method_);
@@ -9814,7 +9814,7 @@ public final class StateMessage {
       }
       if (methodCase_ == 2) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) method_);
+          .computeMessageSize(2, (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) method_);
       }
       if (methodCase_ == 3) {
         size += com.google.protobuf.CodedOutputStream
@@ -10352,9 +10352,9 @@ public final class StateMessage {
       }
 
       private com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.Builder, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimersOrBuilder> deleteBuilder_;
+          org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.Builder, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimerOrBuilder> deleteBuilder_;
       /**
-       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
        * @return Whether the delete field is set.
        */
       @java.lang.Override
@@ -10362,27 +10362,27 @@ public final class StateMessage {
         return methodCase_ == 2;
       }
       /**
-       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
        * @return The delete.
        */
       @java.lang.Override
-      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers getDelete() {
+      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer getDelete() {
         if (deleteBuilder_ == null) {
           if (methodCase_ == 2) {
-            return (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) method_;
+            return (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) method_;
           }
-          return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.getDefaultInstance();
+          return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.getDefaultInstance();
         } else {
           if (methodCase_ == 2) {
             return deleteBuilder_.getMessage();
           }
-          return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.getDefaultInstance();
+          return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.getDefaultInstance();
         }
       }
       /**
-       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
        */
-      public Builder setDelete(org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers value) {
+      public Builder setDelete(org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer value) {
         if (deleteBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -10396,10 +10396,10 @@ public final class StateMessage {
         return this;
       }
       /**
-       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
        */
       public Builder setDelete(
-          org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.Builder builderForValue) {
+          org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.Builder builderForValue) {
         if (deleteBuilder_ == null) {
           method_ = builderForValue.build();
           onChanged();
@@ -10410,13 +10410,13 @@ public final class StateMessage {
         return this;
       }
       /**
-       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
        */
-      public Builder mergeDelete(org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers value) {
+      public Builder mergeDelete(org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer value) {
         if (deleteBuilder_ == null) {
           if (methodCase_ == 2 &&
-              method_ != org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.getDefaultInstance()) {
-            method_ = org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.newBuilder((org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) method_)
+              method_ != org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.getDefaultInstance()) {
+            method_ = org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.newBuilder((org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) method_)
                 .mergeFrom(value).buildPartial();
           } else {
             method_ = value;
@@ -10433,7 +10433,7 @@ public final class StateMessage {
         return this;
       }
       /**
-       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
        */
       public Builder clearDelete() {
         if (deleteBuilder_ == null) {
@@ -10452,38 +10452,38 @@ public final class StateMessage {
         return this;
       }
       /**
-       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
        */
-      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.Builder getDeleteBuilder() {
+      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.Builder getDeleteBuilder() {
         return getDeleteFieldBuilder().getBuilder();
       }
       /**
-       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
        */
       @java.lang.Override
-      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimersOrBuilder getDeleteOrBuilder() {
+      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimerOrBuilder getDeleteOrBuilder() {
         if ((methodCase_ == 2) && (deleteBuilder_ != null)) {
           return deleteBuilder_.getMessageOrBuilder();
         } else {
           if (methodCase_ == 2) {
-            return (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) method_;
+            return (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) method_;
           }
-          return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.getDefaultInstance();
+          return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.getDefaultInstance();
         }
       }
       /**
-       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimers delete = 2;</code>
+       * <code>.org.apache.spark.sql.execution.streaming.state.DeleteTimer delete = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.Builder, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimersOrBuilder> 
+          org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.Builder, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimerOrBuilder> 
           getDeleteFieldBuilder() {
         if (deleteBuilder_ == null) {
           if (!(methodCase_ == 2)) {
-            method_ = org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.getDefaultInstance();
+            method_ = org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.getDefaultInstance();
           }
           deleteBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.Builder, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimersOrBuilder>(
-                  (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) method_,
+              org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.Builder, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimerOrBuilder>(
+                  (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) method_,
                   getParentForChildren(),
                   isClean());
           method_ = null;
@@ -16343,8 +16343,8 @@ public final class StateMessage {
 
   }
 
-  public interface DeleteTimersOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:org.apache.spark.sql.execution.streaming.state.DeleteTimers)
+  public interface DeleteTimerOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:org.apache.spark.sql.execution.streaming.state.DeleteTimer)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -16354,25 +16354,25 @@ public final class StateMessage {
     long getExpiryTimestampMs();
   }
   /**
-   * Protobuf type {@code org.apache.spark.sql.execution.streaming.state.DeleteTimers}
+   * Protobuf type {@code org.apache.spark.sql.execution.streaming.state.DeleteTimer}
    */
-  public static final class DeleteTimers extends
+  public static final class DeleteTimer extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:org.apache.spark.sql.execution.streaming.state.DeleteTimers)
-      DeleteTimersOrBuilder {
+      // @@protoc_insertion_point(message_implements:org.apache.spark.sql.execution.streaming.state.DeleteTimer)
+      DeleteTimerOrBuilder {
   private static final long serialVersionUID = 0L;
-    // Use DeleteTimers.newBuilder() to construct.
-    private DeleteTimers(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+    // Use DeleteTimer.newBuilder() to construct.
+    private DeleteTimer(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
-    private DeleteTimers() {
+    private DeleteTimer() {
     }
 
     @java.lang.Override
     @SuppressWarnings({"unused"})
     protected java.lang.Object newInstance(
         UnusedPrivateParameter unused) {
-      return new DeleteTimers();
+      return new DeleteTimer();
     }
 
     @java.lang.Override
@@ -16382,15 +16382,15 @@ public final class StateMessage {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_descriptor;
+      return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_fieldAccessorTable
+      return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.class, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.Builder.class);
+              org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.class, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.Builder.class);
     }
 
     public static final int EXPIRYTIMESTAMPMS_FIELD_NUMBER = 1;
@@ -16444,10 +16444,10 @@ public final class StateMessage {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers)) {
+      if (!(obj instanceof org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer)) {
         return super.equals(obj);
       }
-      org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers other = (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) obj;
+      org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer other = (org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) obj;
 
       if (getExpiryTimestampMs()
           != other.getExpiryTimestampMs()) return false;
@@ -16470,69 +16470,69 @@ public final class StateMessage {
       return hash;
     }
 
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(
         java.nio.ByteBuffer data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(
         java.nio.ByteBuffer data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(byte[] data)
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(java.io.InputStream input)
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseDelimitedFrom(
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers parseFrom(
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -16545,7 +16545,7 @@ public final class StateMessage {
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
     }
-    public static Builder newBuilder(org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers prototype) {
+    public static Builder newBuilder(org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
     @java.lang.Override
@@ -16561,26 +16561,26 @@ public final class StateMessage {
       return builder;
     }
     /**
-     * Protobuf type {@code org.apache.spark.sql.execution.streaming.state.DeleteTimers}
+     * Protobuf type {@code org.apache.spark.sql.execution.streaming.state.DeleteTimer}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:org.apache.spark.sql.execution.streaming.state.DeleteTimers)
-        org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimersOrBuilder {
+        // @@protoc_insertion_point(builder_implements:org.apache.spark.sql.execution.streaming.state.DeleteTimer)
+        org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimerOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_descriptor;
+        return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_fieldAccessorTable
+        return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.class, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.Builder.class);
+                org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.class, org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.Builder.class);
       }
 
-      // Construct using org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.newBuilder()
+      // Construct using org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.newBuilder()
       private Builder() {
 
       }
@@ -16601,17 +16601,17 @@ public final class StateMessage {
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_descriptor;
+        return org.apache.spark.sql.execution.streaming.state.StateMessage.internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_descriptor;
       }
 
       @java.lang.Override
-      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers getDefaultInstanceForType() {
-        return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.getDefaultInstance();
+      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer getDefaultInstanceForType() {
+        return org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.getDefaultInstance();
       }
 
       @java.lang.Override
-      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers build() {
-        org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers result = buildPartial();
+      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer build() {
+        org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
@@ -16619,8 +16619,8 @@ public final class StateMessage {
       }
 
       @java.lang.Override
-      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers buildPartial() {
-        org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers result = new org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers(this);
+      public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer buildPartial() {
+        org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer result = new org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer(this);
         result.expiryTimestampMs_ = expiryTimestampMs_;
         onBuilt();
         return result;
@@ -16660,16 +16660,16 @@ public final class StateMessage {
       }
       @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers) {
-          return mergeFrom((org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers)other);
+        if (other instanceof org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer) {
+          return mergeFrom((org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers other) {
-        if (other == org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer other) {
+        if (other == org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer.getDefaultInstance()) return this;
         if (other.getExpiryTimestampMs() != 0L) {
           setExpiryTimestampMs(other.getExpiryTimestampMs());
         }
@@ -16763,23 +16763,23 @@ public final class StateMessage {
       }
 
 
-      // @@protoc_insertion_point(builder_scope:org.apache.spark.sql.execution.streaming.state.DeleteTimers)
+      // @@protoc_insertion_point(builder_scope:org.apache.spark.sql.execution.streaming.state.DeleteTimer)
     }
 
-    // @@protoc_insertion_point(class_scope:org.apache.spark.sql.execution.streaming.state.DeleteTimers)
-    private static final org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers DEFAULT_INSTANCE;
+    // @@protoc_insertion_point(class_scope:org.apache.spark.sql.execution.streaming.state.DeleteTimer)
+    private static final org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer DEFAULT_INSTANCE;
     static {
-      DEFAULT_INSTANCE = new org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers();
+      DEFAULT_INSTANCE = new org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer();
     }
 
-    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers getDefaultInstance() {
+    public static org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
-    private static final com.google.protobuf.Parser<DeleteTimers>
-        PARSER = new com.google.protobuf.AbstractParser<DeleteTimers>() {
+    private static final com.google.protobuf.Parser<DeleteTimer>
+        PARSER = new com.google.protobuf.AbstractParser<DeleteTimer>() {
       @java.lang.Override
-      public DeleteTimers parsePartialFrom(
+      public DeleteTimer parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
@@ -16798,17 +16798,17 @@ public final class StateMessage {
       }
     };
 
-    public static com.google.protobuf.Parser<DeleteTimers> parser() {
+    public static com.google.protobuf.Parser<DeleteTimer> parser() {
       return PARSER;
     }
 
     @java.lang.Override
-    public com.google.protobuf.Parser<DeleteTimers> getParserForType() {
+    public com.google.protobuf.Parser<DeleteTimer> getParserForType() {
       return PARSER;
     }
 
     @java.lang.Override
-    public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimers getDefaultInstanceForType() {
+    public org.apache.spark.sql.execution.streaming.state.StateMessage.DeleteTimer getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -19964,10 +19964,10 @@ public final class StateMessage {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_org_apache_spark_sql_execution_streaming_state_RegisterTimer_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_descriptor;
+    internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_fieldAccessorTable;
+      internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_org_apache_spark_sql_execution_streaming_state_ListTimers_descriptor;
   private static final 
@@ -20064,47 +20064,47 @@ public final class StateMessage {
       "d\"/\n\022ExpiryTimerRequest\022\031\n\021expiryTimesta" +
       "mpMs\030\001 \001(\003\"\023\n\021GetProcessingTime\"\016\n\014GetWa" +
       "termark\"5\n\020StateCallCommand\022\021\n\tstateName" +
-      "\030\001 \001(\t\022\016\n\006schema\030\002 \001(\t\"\220\002\n\025TimerStateCal" +
+      "\030\001 \001(\t\022\016\n\006schema\030\002 \001(\t\"\217\002\n\025TimerStateCal" +
       "lCommand\022Q\n\010register\030\001 \001(\0132=.org.apache." +
       "spark.sql.execution.streaming.state.Regi" +
-      "sterTimerH\000\022N\n\006delete\030\002 \001(\0132<.org.apache" +
+      "sterTimerH\000\022M\n\006delete\030\002 \001(\0132;.org.apache" +
       ".spark.sql.execution.streaming.state.Del" +
-      "eteTimersH\000\022J\n\004list\030\003 \001(\0132:.org.apache.s" +
-      "park.sql.execution.streaming.state.ListT" +
-      "imersH\000B\010\n\006method\"\341\002\n\016ValueStateCall\022\021\n\t" +
-      "stateName\030\001 \001(\t\022H\n\006exists\030\002 \001(\01326.org.ap" +
+      "eteTimerH\000\022J\n\004list\030\003 \001(\0132:.org.apache.sp" +
+      "ark.sql.execution.streaming.state.ListTi" +
+      "mersH\000B\010\n\006method\"\341\002\n\016ValueStateCall\022\021\n\ts" +
+      "tateName\030\001 \001(\t\022H\n\006exists\030\002 \001(\01326.org.apa" +
+      "che.spark.sql.execution.streaming.state." +
+      "ExistsH\000\022B\n\003get\030\003 \001(\01323.org.apache.spark" +
+      ".sql.execution.streaming.state.GetH\000\022\\\n\020" +
+      "valueStateUpdate\030\004 \001(\0132@.org.apache.spar" +
+      "k.sql.execution.streaming.state.ValueSta" +
+      "teUpdateH\000\022F\n\005clear\030\005 \001(\01325.org.apache.s" +
+      "park.sql.execution.streaming.state.Clear" +
+      "H\000B\010\n\006method\"\376\003\n\rListStateCall\022\021\n\tstateN" +
+      "ame\030\001 \001(\t\022H\n\006exists\030\002 \001(\01326.org.apache.s" +
+      "park.sql.execution.streaming.state.Exist" +
+      "sH\000\022B\n\003get\030\003 \001(\01323.org.apache.spark.sql." +
+      "execution.streaming.state.GetH\000\022T\n\014listS" +
+      "tatePut\030\004 \001(\0132<.org.apache.spark.sql.exe" +
+      "cution.streaming.state.ListStatePutH\000\022R\n" +
+      "\013appendValue\030\005 \001(\0132;.org.apache.spark.sq" +
+      "l.execution.streaming.state.AppendValueH" +
+      "\000\022P\n\nappendList\030\006 \001(\0132:.org.apache.spark" +
+      ".sql.execution.streaming.state.AppendLis" +
+      "tH\000\022F\n\005clear\030\007 \001(\01325.org.apache.spark.sq" +
+      "l.execution.streaming.state.ClearH\000B\010\n\006m" +
+      "ethod\"\035\n\016SetImplicitKey\022\013\n\003key\030\001 \001(\014\"\023\n\021" +
+      "RemoveImplicitKey\"\010\n\006Exists\"\005\n\003Get\"*\n\rRe" +
+      "gisterTimer\022\031\n\021expiryTimestampMs\030\001 \001(\003\"(" +
+      "\n\013DeleteTimer\022\031\n\021expiryTimestampMs\030\001 \001(\003" +
+      "\"\014\n\nListTimers\"!\n\020ValueStateUpdate\022\r\n\005va" +
+      "lue\030\001 \001(\014\"\007\n\005Clear\"\016\n\014ListStatePut\"\034\n\013Ap" +
+      "pendValue\022\r\n\005value\030\001 \001(\014\"\014\n\nAppendList\"\\" +
+      "\n\016SetHandleState\022J\n\005state\030\001 \001(\0162;.org.ap" +
       "ache.spark.sql.execution.streaming.state" +
-      ".ExistsH\000\022B\n\003get\030\003 \001(\01323.org.apache.spar" +
-      "k.sql.execution.streaming.state.GetH\000\022\\\n" +
-      "\020valueStateUpdate\030\004 \001(\0132@.org.apache.spa" +
-      "rk.sql.execution.streaming.state.ValueSt" +
-      "ateUpdateH\000\022F\n\005clear\030\005 \001(\01325.org.apache." +
-      "spark.sql.execution.streaming.state.Clea" +
-      "rH\000B\010\n\006method\"\376\003\n\rListStateCall\022\021\n\tstate" +
-      "Name\030\001 \001(\t\022H\n\006exists\030\002 \001(\01326.org.apache." +
-      "spark.sql.execution.streaming.state.Exis" +
-      "tsH\000\022B\n\003get\030\003 \001(\01323.org.apache.spark.sql" +
-      ".execution.streaming.state.GetH\000\022T\n\014list" +
-      "StatePut\030\004 \001(\0132<.org.apache.spark.sql.ex" +
-      "ecution.streaming.state.ListStatePutH\000\022R" +
-      "\n\013appendValue\030\005 \001(\0132;.org.apache.spark.s" +
-      "ql.execution.streaming.state.AppendValue" +
-      "H\000\022P\n\nappendList\030\006 \001(\0132:.org.apache.spar" +
-      "k.sql.execution.streaming.state.AppendLi" +
-      "stH\000\022F\n\005clear\030\007 \001(\01325.org.apache.spark.s" +
-      "ql.execution.streaming.state.ClearH\000B\010\n\006" +
-      "method\"\035\n\016SetImplicitKey\022\013\n\003key\030\001 \001(\014\"\023\n" +
-      "\021RemoveImplicitKey\"\010\n\006Exists\"\005\n\003Get\"*\n\rR" +
-      "egisterTimer\022\031\n\021expiryTimestampMs\030\001 \001(\003\"" +
-      ")\n\014DeleteTimers\022\031\n\021expiryTimestampMs\030\001 \001" +
-      "(\003\"\014\n\nListTimers\"!\n\020ValueStateUpdate\022\r\n\005" +
-      "value\030\001 \001(\014\"\007\n\005Clear\"\016\n\014ListStatePut\"\034\n\013" +
-      "AppendValue\022\r\n\005value\030\001 \001(\014\"\014\n\nAppendList" +
-      "\"\\\n\016SetHandleState\022J\n\005state\030\001 \001(\0162;.org." +
-      "apache.spark.sql.execution.streaming.sta" +
-      "te.HandleState*`\n\013HandleState\022\013\n\007CREATED" +
-      "\020\000\022\017\n\013INITIALIZED\020\001\022\022\n\016DATA_PROCESSED\020\002\022" +
-      "\023\n\017TIMER_PROCESSED\020\003\022\n\n\006CLOSED\020\004b\006proto3"
+      ".HandleState*`\n\013HandleState\022\013\n\007CREATED\020\000" +
+      "\022\017\n\013INITIALIZED\020\001\022\022\n\016DATA_PROCESSED\020\002\022\023\n" +
+      "\017TIMER_PROCESSED\020\003\022\n\n\006CLOSED\020\004b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -20224,11 +20224,11 @@ public final class StateMessage {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_org_apache_spark_sql_execution_streaming_state_RegisterTimer_descriptor,
         new java.lang.String[] { "ExpiryTimestampMs", });
-    internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_descriptor =
+    internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_descriptor =
       getDescriptor().getMessageTypes().get(19);
-    internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_fieldAccessorTable = new
+    internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimers_descriptor,
+        internal_static_org_apache_spark_sql_execution_streaming_state_DeleteTimer_descriptor,
         new java.lang.String[] { "ExpiryTimestampMs", });
     internal_static_org_apache_spark_sql_execution_streaming_state_ListTimers_descriptor =
       getDescriptor().getMessageTypes().get(20);

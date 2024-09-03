@@ -208,8 +208,8 @@ class StatefulProcessorHandle:
     def registerTimer(self, expiry_time_stamp_ms: int) -> None:
         self.stateful_processor_api_client.register_timer(expiry_time_stamp_ms)
 
-    def deleteTimers(self, expiry_time_stamp_ms: int) -> None:
-        self.stateful_processor_api_client.delete_timers(expiry_time_stamp_ms)
+    def deleteTimer(self, expiry_time_stamp_ms: int) -> None:
+        self.stateful_processor_api_client.delete_timer(expiry_time_stamp_ms)
 
     def listTimers(self) -> list[int]:
         return self.stateful_processor_api_client.list_timers()
@@ -260,7 +260,10 @@ class StatefulProcessor(ABC):
         rows : iterable of :class:`pandas.DataFrame`
             iterator of input rows associated with grouping key
         timer_values: TimerValues
+                      Timer value for the current batch that process the input rows.
+                      Users can get the processing or event time timestamp from TimerValues.
         expired_timer_info: ExpiredTimerInfo
+                            Timestamp of expired timers on the grouping key.
         """
         ...
 

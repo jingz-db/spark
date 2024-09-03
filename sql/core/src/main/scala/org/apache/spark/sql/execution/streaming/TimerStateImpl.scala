@@ -185,6 +185,15 @@ class TimerStateImpl(
     }
   }
 
+  /**
+   * Function to get all the expired registered timers for all grouping keys.
+   * Returning the grouping key as UnsafeRow to avoid unnecessary (de)serialization
+   * for internal use.
+   *
+   * @param expiryTimestampMs Threshold for expired timestamp in milliseconds, this function
+   *                          will return all timers that have timestamp less than passed threshold.
+   * @return - iterator of all the registered timers for all grouping keys
+   */
   def getExpiredTimersWithKeyRow(expiryTimestampMs: Long): Iterator[(UnsafeRow, Long)] = {
     // this iter is increasingly sorted on timestamp
     val iter = store.iterator(tsToKeyCFName)
