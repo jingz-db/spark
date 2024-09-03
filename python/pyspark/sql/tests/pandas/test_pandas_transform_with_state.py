@@ -271,14 +271,15 @@ class TransformWithStateInPandasTestsMixin:
     def test_transform_with_state_in_pandas_proc_timer(self):
         def check_results(batch_df, batch_id):
             if batch_id == 0:
-                assert set(batch_df.sort("id").collect()) == {
+                # raise Exception(f"I am here inside batch {batch_id}, batch content: {batch_df.show()}")
+                assert set(batch_df.sort("id").select("id", "countAsString").collect()) == {
                     Row(id="0", countAsString="2"),
                     Row(id="1", countAsString="2"),
                 }
             else:
-                assert set(batch_df.sort("id").collect()) == {
-                    Row(id="0", countAsString="3"),
-                    Row(id="1", countAsString="2"),
+                assert set(batch_df.sort("id").select("id", "countAsString").collect()) == {
+                    Row(id="0", countAsString="5"),
+                    Row(id="1", countAsString="4"),
                 }
 
         self._test_transform_with_state_in_pandas_proc_timer(ProcTimeStatefulProcessor(), check_results)

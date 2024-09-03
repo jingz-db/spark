@@ -8,6 +8,7 @@ CREATED: HandleState
 DATA_PROCESSED: HandleState
 DESCRIPTOR: _descriptor.FileDescriptor
 INITIALIZED: HandleState
+TIMER_PROCESSED: HandleState
 
 class AppendList(_message.Message):
     __slots__ = []
@@ -23,11 +24,31 @@ class Clear(_message.Message):
     __slots__ = []
     def __init__(self) -> None: ...
 
+class DeleteTimers(_message.Message):
+    __slots__ = ["expiryTimestampMs"]
+    EXPIRYTIMESTAMPMS_FIELD_NUMBER: ClassVar[int]
+    expiryTimestampMs: int
+    def __init__(self, expiryTimestampMs: Optional[int] = ...) -> None: ...
+
 class Exists(_message.Message):
     __slots__ = []
     def __init__(self) -> None: ...
 
+class ExpiryTimerRequest(_message.Message):
+    __slots__ = ["expiryTimestampMs"]
+    EXPIRYTIMESTAMPMS_FIELD_NUMBER: ClassVar[int]
+    expiryTimestampMs: int
+    def __init__(self, expiryTimestampMs: Optional[int] = ...) -> None: ...
+
 class Get(_message.Message):
+    __slots__ = []
+    def __init__(self) -> None: ...
+
+class GetProcessingTime(_message.Message):
+    __slots__ = []
+    def __init__(self) -> None: ...
+
+class GetWatermark(_message.Message):
     __slots__ = []
     def __init__(self) -> None: ...
 
@@ -61,6 +82,16 @@ class ListStatePut(_message.Message):
     __slots__ = []
     def __init__(self) -> None: ...
 
+class ListTimers(_message.Message):
+    __slots__ = []
+    def __init__(self) -> None: ...
+
+class RegisterTimer(_message.Message):
+    __slots__ = ["expiryTimestampMs"]
+    EXPIRYTIMESTAMPMS_FIELD_NUMBER: ClassVar[int]
+    expiryTimestampMs: int
+    def __init__(self, expiryTimestampMs: Optional[int] = ...) -> None: ...
+
 class RemoveImplicitKey(_message.Message):
     __slots__ = []
     def __init__(self) -> None: ...
@@ -86,16 +117,18 @@ class StateCallCommand(_message.Message):
     def __init__(self, stateName: Optional[str] = ..., schema: Optional[str] = ...) -> None: ...
 
 class StateRequest(_message.Message):
-    __slots__ = ["implicitGroupingKeyRequest", "stateVariableRequest", "statefulProcessorCall", "version"]
+    __slots__ = ["implicitGroupingKeyRequest", "stateVariableRequest", "statefulProcessorCall", "timerRequest", "version"]
     IMPLICITGROUPINGKEYREQUEST_FIELD_NUMBER: ClassVar[int]
     STATEFULPROCESSORCALL_FIELD_NUMBER: ClassVar[int]
     STATEVARIABLEREQUEST_FIELD_NUMBER: ClassVar[int]
+    TIMERREQUEST_FIELD_NUMBER: ClassVar[int]
     VERSION_FIELD_NUMBER: ClassVar[int]
     implicitGroupingKeyRequest: ImplicitGroupingKeyRequest
     stateVariableRequest: StateVariableRequest
     statefulProcessorCall: StatefulProcessorCall
+    timerRequest: TimerRequest
     version: int
-    def __init__(self, version: Optional[int] = ..., statefulProcessorCall: Optional[Union[StatefulProcessorCall, Mapping]] = ..., stateVariableRequest: Optional[Union[StateVariableRequest, Mapping]] = ..., implicitGroupingKeyRequest: Optional[Union[ImplicitGroupingKeyRequest, Mapping]] = ...) -> None: ...
+    def __init__(self, version: Optional[int] = ..., statefulProcessorCall: Optional[Union[StatefulProcessorCall, Mapping]] = ..., stateVariableRequest: Optional[Union[StateVariableRequest, Mapping]] = ..., implicitGroupingKeyRequest: Optional[Union[ImplicitGroupingKeyRequest, Mapping]] = ..., timerRequest: Optional[Union[TimerRequest, Mapping]] = ...) -> None: ...
 
 class StateResponse(_message.Message):
     __slots__ = ["errorMessage", "statusCode", "value"]
@@ -116,16 +149,44 @@ class StateVariableRequest(_message.Message):
     def __init__(self, valueStateCall: Optional[Union[ValueStateCall, Mapping]] = ..., listStateCall: Optional[Union[ListStateCall, Mapping]] = ...) -> None: ...
 
 class StatefulProcessorCall(_message.Message):
-    __slots__ = ["getListState", "getMapState", "getValueState", "setHandleState"]
+    __slots__ = ["getListState", "getMapState", "getValueState", "setHandleState", "timerStateCall"]
     GETLISTSTATE_FIELD_NUMBER: ClassVar[int]
     GETMAPSTATE_FIELD_NUMBER: ClassVar[int]
     GETVALUESTATE_FIELD_NUMBER: ClassVar[int]
     SETHANDLESTATE_FIELD_NUMBER: ClassVar[int]
+    TIMERSTATECALL_FIELD_NUMBER: ClassVar[int]
     getListState: StateCallCommand
     getMapState: StateCallCommand
     getValueState: StateCallCommand
     setHandleState: SetHandleState
-    def __init__(self, setHandleState: Optional[Union[SetHandleState, Mapping]] = ..., getValueState: Optional[Union[StateCallCommand, Mapping]] = ..., getListState: Optional[Union[StateCallCommand, Mapping]] = ..., getMapState: Optional[Union[StateCallCommand, Mapping]] = ...) -> None: ...
+    timerStateCall: TimerStateCallCommand
+    def __init__(self, setHandleState: Optional[Union[SetHandleState, Mapping]] = ..., getValueState: Optional[Union[StateCallCommand, Mapping]] = ..., getListState: Optional[Union[StateCallCommand, Mapping]] = ..., getMapState: Optional[Union[StateCallCommand, Mapping]] = ..., timerStateCall: Optional[Union[TimerStateCallCommand, Mapping]] = ...) -> None: ...
+
+class TimerRequest(_message.Message):
+    __slots__ = ["expiryTimerRequest", "timerValueRequest"]
+    EXPIRYTIMERREQUEST_FIELD_NUMBER: ClassVar[int]
+    TIMERVALUEREQUEST_FIELD_NUMBER: ClassVar[int]
+    expiryTimerRequest: ExpiryTimerRequest
+    timerValueRequest: TimerValueRequest
+    def __init__(self, timerValueRequest: Optional[Union[TimerValueRequest, Mapping]] = ..., expiryTimerRequest: Optional[Union[ExpiryTimerRequest, Mapping]] = ...) -> None: ...
+
+class TimerStateCallCommand(_message.Message):
+    __slots__ = ["delete", "list", "register"]
+    DELETE_FIELD_NUMBER: ClassVar[int]
+    LIST_FIELD_NUMBER: ClassVar[int]
+    REGISTER_FIELD_NUMBER: ClassVar[int]
+    delete: DeleteTimers
+    list: ListTimers
+    register: RegisterTimer
+    def __init__(self, register: Optional[Union[RegisterTimer, Mapping]] = ..., delete: Optional[Union[DeleteTimers, Mapping]] = ..., list: Optional[Union[ListTimers, Mapping]] = ...) -> None: ...
+
+class TimerValueRequest(_message.Message):
+    __slots__ = ["getProcessingTimer", "getWatermark"]
+    GETPROCESSINGTIMER_FIELD_NUMBER: ClassVar[int]
+    GETWATERMARK_FIELD_NUMBER: ClassVar[int]
+    getProcessingTimer: GetProcessingTime
+    getWatermark: GetWatermark
+    def __init__(self, getProcessingTimer: Optional[Union[GetProcessingTime, Mapping]] = ..., getWatermark: Optional[Union[GetWatermark, Mapping]] = ...) -> None: ...
 
 class ValueStateCall(_message.Message):
     __slots__ = ["clear", "exists", "get", "stateName", "valueStateUpdate"]

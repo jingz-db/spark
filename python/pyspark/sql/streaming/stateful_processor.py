@@ -20,7 +20,8 @@ from typing import Any, TYPE_CHECKING, Iterator, Optional, Union, cast
 
 from pyspark.sql import Row
 from pyspark.sql.streaming.stateful_processor_api_client import StatefulProcessorApiClient
-from pyspark.sql.streaming.value_state_client import ListStateClient, ListStateIterator, ValueStateClient
+from pyspark.sql.streaming.list_state_client import ListStateClient, ListStateIterator
+from pyspark.sql.streaming.value_state_client import ValueStateClient
 from pyspark.sql.types import StructType, _create_row, _parse_datatype_string
 
 if TYPE_CHECKING:
